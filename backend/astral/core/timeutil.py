@@ -139,4 +139,4 @@ def beyond_leap_second_validity(t: Time) -> bool:
 
 
 def data_age_days(epoch: Time, at: Time) -> float:
-    return float(((at.utc.jd1 - epoch.utc.jd1) + (at.utc.jd2 - epoch.utc.jd2)))
+    return float((at.utc.jd1 - epoch.utc.jd1) + (at.utc.jd2 - epoch.utc.jd2))

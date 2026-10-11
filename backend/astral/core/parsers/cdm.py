@@ -98,6 +98,7 @@ def parse_cdm_kvn(text: str) -> tuple[list[OrbitalRecord], list[Finding]]:
             findings.append(Finding(Severity.ERROR, "CDM_STATE_NUMERIC", f"{role}: non-numeric state", oid))
             continue
         cov = None
+        rejected = None
         transformations = []
         if all(k in o for k in COV_KEYS):
             try:
@@ -107,6 +108,8 @@ def parse_cdm_kvn(text: str) -> tuple[list[OrbitalRecord], list[Finding]]:
                 findings.extend(chk.findings)
                 if chk.valid:
                     cov = Covariance(m, "RTN", tca, f"CDM {msg_id} {role}")
+                else:
+                    rejected = {"matrix_km": m.tolist(), "frame": "RTN", "epoch": tca.utc.isot, "source": f"CDM {msg_id} {role}"}
             except ValueError as exc:
                 findings.append(Finding(Severity.ERROR, "CDM_COV_NUMERIC", f"{role}: {exc}", oid))
         else:
@@ -135,6 +138,7 @@ def parse_cdm_kvn(text: str) -> tuple[list[OrbitalRecord], list[Finding]]:
                 "covariance_method": o.get("COVARIANCE_METHOD"),
                 "area_pc_m2": _float_or_none(o.get("AREA_PC")),
                 "time_lastob_end": o.get("TIME_LASTOB_END"),
+                **({"rejected_covariance": rejected} if rejected else {}),
             },
         )
         records.append(rec)

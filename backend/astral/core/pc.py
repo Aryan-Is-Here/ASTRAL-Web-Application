@@ -26,6 +26,7 @@ caller receives ``INSUFFICIENT_DATA_FOR_PC`` with the missing inputs listed.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -75,10 +76,10 @@ def insufficient(reasons: list[str]) -> PcResult:
     return PcResult(PcStatus.INSUFFICIENT_DATA_FOR_PC, None, None, reasons)
 
 
-def pc_2d_principal(mx: float, my: float, sx: float, sy: float, R: float) -> tuple[float, float]:
+def pc_2d_principal(mx: float, my: float, sx: float, sy: float, R: float, notes: list[str] | None = None) -> tuple[float, float]:
     """Pc for a disc of radius R centred at the origin, Gaussian centred at (mx, my)
-    with independent standard deviations sx, sy. Returns (pc, abs_error_estimate)."""
-    s2x = np.sqrt(2.0) * sx
+    with independent standard deviations sx, sy. Returns (pc, abs_error_estimate).
+    QUADPACK warnings are captured into ``notes`` instead of being printed."""
     s2y = np.sqrt(2.0) * sy
     norm = 1.0 / (np.sqrt(2.0 * np.pi) * sx)
 
@@ -88,7 +89,13 @@ def pc_2d_principal(mx: float, my: float, sx: float, sy: float, R: float) -> tup
         return norm * np.exp(-((x - mx) ** 2) / (2 * sx * sx)) * gy
 
     pts = [p for p in (mx, mx - 3 * sx, mx + 3 * sx) if -R < p < R]
-    val, err = integrate.quad(f, -R, R, points=pts or None, epsabs=0.0, epsrel=1e-10, limit=400)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", integrate.IntegrationWarning)
+        val, err = integrate.quad(f, -R, R, points=pts or None, epsabs=0.0, epsrel=1e-9, limit=400)
+    if notes is not None:
+        for w in caught:
+            if issubclass(w.category, integrate.IntegrationWarning):
+                notes.append("quadrature: " + str(w.message).split(".")[0])
     return float(val), float(err)
 
 
@@ -127,24 +134,25 @@ def foster_2d(r1, v1, cov1, r2, v2, cov2, hbr_km: float | None) -> PcResult:
         return PcResult(PcStatus.NUMERICAL_FAILURE, None, FOSTER_METHOD, ["projected covariance is singular"])
     mm = vecs.T @ m
     sx, sy = np.sqrt(w)
-    pc, err = pc_2d_principal(float(mm[0]), float(mm[1]), float(sx), float(sy), float(hbr_km))
-    warnings = []
+    notes: list[str] = []
+    pc, err = pc_2d_principal(float(mm[0]), float(mm[1]), float(sx), float(sy), float(hbr_km), notes)
+    warns = list(dict.fromkeys(notes))
     sz = float(np.sqrt(ef[2] @ c @ ef[2]))
     t_enc = 2 * 5 * sz / speed
     if speed < LOW_REL_SPEED_KM_S:
-        warnings.append(f"relative speed {speed:.3f} km/s is low; rectilinear-motion assumption may not hold")
+        warns.append(f"relative speed {speed:.3f} km/s is low; rectilinear-motion assumption may not hold")
     if t_enc > LONG_ENCOUNTER_S:
-        warnings.append(f"estimated encounter duration {t_enc:.0f} s exceeds {LONG_ENCOUNTER_S:.0f} s; static-covariance assumption questionable")
+        warns.append(f"estimated encounter duration {t_enc:.0f} s exceeds {LONG_ENCOUNTER_S:.0f} s; static-covariance assumption questionable")
     if not np.isfinite(pc) or pc < -1e-15 or pc > 1 + 1e-12:
         return PcResult(PcStatus.NUMERICAL_FAILURE, None, FOSTER_METHOD, [f"quadrature returned {pc}"])
     if err > max(1e-6 * abs(pc), 1e-300):
-        warnings.append(f"quadrature error estimate {err:.2e} is large relative to Pc")
+        warns.append(f"quadrature error estimate {err:.2e} is large relative to Pc")
     return PcResult(
         PcStatus.COMPUTED,
         float(min(max(pc, 0.0), 1.0)),
         FOSTER_METHOD,
         [],
-        warnings,
+        warns,
         {
             "hbr_km": hbr_km,
             "miss_in_plane_km": m.tolist(),

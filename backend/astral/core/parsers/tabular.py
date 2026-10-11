@@ -84,6 +84,7 @@ def _state_record(d: dict[str, Any], ref: str, fmt: str, findings: list[Finding]
             findings.append(Finding(Severity.ERROR, "STATE_HBR", f"{ref}: hard_body_radius_m must be a positive number", oid))
             return None
     cov = None
+    rejected = None
     if d.get("covariance"):
         c = d["covariance"]
         try:
@@ -96,6 +97,8 @@ def _state_record(d: dict[str, Any], ref: str, fmt: str, findings: list[Finding]
             findings.extend(chk.findings)
             if chk.valid:
                 cov = Covariance(m, cframe, epoch, f"{fmt} {ref}")
+            else:
+                rejected = {"matrix_km": m.tolist(), "frame": cframe, "epoch": epoch.utc.isot, "source": f"{fmt} {ref}"}
         except (KeyError, TypeError, ValueError, FrameError) as exc:
             findings.append(Finding(Severity.ERROR, "STATE_COVARIANCE", f"{ref}: invalid covariance: {exc}", oid))
     return OrbitalRecord(
@@ -111,6 +114,7 @@ def _state_record(d: dict[str, Any], ref: str, fmt: str, findings: list[Finding]
         covariance=cov,
         hard_body_radius_m=hbr_f,
         source_ref=ref,
+        extra={"rejected_covariance": rejected} if rejected else {},
     )
 
 

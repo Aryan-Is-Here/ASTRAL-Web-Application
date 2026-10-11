@@ -60,7 +60,7 @@ def demo_catalogue(epoch: Time, n_background: int = 40, n_engineered: int = 6, s
         primaries.append((cat, s, inc, raan, n))
         out.append(_tle(s, f"SYN-A{k + 1:02d}"))
         cat += 1
-    for k, (pc, ps, inc, raan, n) in enumerate(primaries):
+    for k, (_cat, ps, inc, _raan, n) in enumerate(primaries):
         t_star = epoch + TimeDelta(float(rng.uniform(4, 60)) * 3600.0, format="sec")
         target = _pos(ps, t_star)
         d_inc = float(rng.uniform(5, 60)) * (1 if rng.random() < 0.5 else -1)

@@ -23,9 +23,8 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Protocol
-
 from importlib.metadata import version as _pkg_version
+from typing import Protocol
 
 import numpy as np
 from astropy.time import Time

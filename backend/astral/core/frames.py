@@ -29,6 +29,36 @@ import erfa
 import numpy as np
 from astropy.coordinates import GCRS, ITRS, TEME, CartesianDifferential, CartesianRepresentation
 from astropy.time import Time
+from astropy.utils import iers
+
+# Earth-orientation parameters (UT1-UTC, polar motion) come from the IERS-B
+# table bundled with astropy; ASTRAL never downloads EOP data at run time.
+# Outside the table, astropy assumes UT1-UTC = 0 and mean polar motion. This
+# affects only conversions involving ITRF (Earth-fixed): up to ~0.9 s of
+# Earth rotation, i.e. up to ~0.5 km along-track for LEO positions. TEME<->GCRF
+# conversions do not depend on UT1 (the Earth-rotation terms cancel).
+iers.conf.iers_degraded_accuracy = "ignore"
+
+
+def eop_table_end() -> Time:
+    t = iers.earth_orientation_table.get()
+    return Time(t["MJD"][-1], format="mjd", scale="utc")
+
+
+def eop_covered(t: Time) -> bool:
+    try:
+        return bool(Time(t).utc.max() <= eop_table_end())
+    except Exception:
+        return False
+
+
+def earth_rotation_angle_deg(t: Time) -> tuple[float, bool]:
+    """Earth Rotation Angle (IAU 2000) in degrees and whether real UT1 was used."""
+    if eop_covered(t):
+        u = t.ut1
+        return float(np.degrees(erfa.era00(u.jd1, u.jd2)) % 360), True
+    u = t.utc
+    return float(np.degrees(erfa.era00(u.jd1, u.jd2)) % 360), False
 
 
 class Frame(str, Enum):

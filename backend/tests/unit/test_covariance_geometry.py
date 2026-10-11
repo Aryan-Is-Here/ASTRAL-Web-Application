@@ -5,8 +5,8 @@ from astropy.time import Time
 
 from astral.core.covariance import inertial_to_rtn, lower_triangle_to_matrix, nearest_psd, rtn_to_inertial, sigma_ellipse, validate
 from astral.core.encounter import geometry
-from astral.core.maneuver import ManeuverSpec, simulate
 from astral.core.frames import Frame
+from astral.core.maneuver import ManeuverSpec, simulate
 from astral.core.propagation import J2Propagator
 
 

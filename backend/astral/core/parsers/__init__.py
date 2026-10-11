@@ -9,6 +9,7 @@ from typing import Any
 from astropy.time import Time
 
 from ..findings import Finding, Severity
+from ..frames import Frame, eop_covered
 from ..records import OrbitalRecord, RecordKind
 from ..timeutil import beyond_leap_second_validity, data_age_days
 from .cdm import parse_cdm_kvn
@@ -128,6 +129,9 @@ def dataset_checks(records: list[OrbitalRecord], reference_time: Time) -> list[F
             out.append(Finding(Severity.WARNING, "STALE_DATA", f"{r.object_id} epoch is {age:.1f} days before the reference time (limit {limit} d)", r.object_id))
         if age < -1.0 and r.kind is not RecordKind.EPHEMERIS:
             out.append(Finding(Severity.WARNING, "FUTURE_EPOCH", f"{r.object_id} epoch is {-age:.1f} days after the reference time", r.object_id))
+        if r.frame is Frame.ITRF and not eop_covered(r.epoch):
+            out.append(Finding(Severity.WARNING, "EOP_UNAVAILABLE", f"{r.object_id}: ITRF data at an epoch beyond the bundled IERS EOP table; "
+                               "conversion to inertial frames assumes UT1-UTC = 0 (up to ~0.5 km error in LEO)", r.object_id))
         if beyond_leap_second_validity(r.epoch):
             out.append(Finding(Severity.WARNING, "LEAP_SECOND_TABLE_EXPIRED", f"{r.object_id} epoch is beyond the bundled leap-second table validity", r.object_id))
     epochs = [r.epoch for r in records if r.kind is not RecordKind.EPHEMERIS]
