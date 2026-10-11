@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "astral-api",
+      "runtimeExecutable": "E:/Projects/ASTRAL/backend/.venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "astral.main:app", "--host", "127.0.0.1", "--port", "8000"],
+      "cwd": "backend",
+      "port": 8000
+    },
+    {
+      "name": "astral-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "frontend",
+      "port": 5173
+    }
+  ]
+}

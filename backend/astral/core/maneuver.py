@@ -173,6 +173,8 @@ def simulate(
         try:
             res = screen(props, cfg)
             for e in res.encounters:
+                if secondary.object_id in (e.primary, e.secondary):
+                    continue  # the encounter under study is reported in the arms above
                 other_enc.append(e.to_dict())
             if res.warnings:
                 warnings.extend(f"secondary screening: {w}" for w in res.warnings[:5])

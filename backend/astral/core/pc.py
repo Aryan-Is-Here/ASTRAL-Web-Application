@@ -145,7 +145,9 @@ def foster_2d(r1, v1, cov1, r2, v2, cov2, hbr_km: float | None) -> PcResult:
         warns.append(f"estimated encounter duration {t_enc:.0f} s exceeds {LONG_ENCOUNTER_S:.0f} s; static-covariance assumption questionable")
     if not np.isfinite(pc) or pc < -1e-15 or pc > 1 + 1e-12:
         return PcResult(PcStatus.NUMERICAL_FAILURE, None, FOSTER_METHOD, [f"quadrature returned {pc}"])
-    if err > max(1e-6 * abs(pc), 1e-300):
+    if pc == 0.0:
+        warns.append("Pc below the float64 range (< 1e-300); integrand underflows. Reported as 0 meaning 'numerically negligible', not 'impossible'.")
+    elif err > max(1e-6 * abs(pc), 1e-300):
         warns.append(f"quadrature error estimate {err:.2e} is large relative to Pc")
     return PcResult(
         PcStatus.COMPUTED,

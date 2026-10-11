@@ -179,39 +179,50 @@ class J2Propagator:
         self.r0 = np.asarray(r_km, dtype=float)
         self.v0 = np.asarray(v_km_s, dtype=float)
         self.frame = frame
+        self._fwd = None  # (span_s, dense solution) for t >= 0
+        self._bwd = None  # for t <= 0
 
     def coverage(self) -> tuple[Time | None, Time | None]:
         return None, None
+
+    def _ensure(self, lo: float, hi: float) -> None:
+        """Integrate once (forward and/or backward from epoch) with dense output
+        covering [lo, hi] seconds from epoch; later queries reuse the
+        DOP853 continuous extension (7th-order interpolant, same tolerances)."""
+        y0 = np.concatenate([self.r0, self.v0])
+
+        def f(_t, y):
+            return np.concatenate([y[3:], j2_accel(y[:3])])
+
+        for sign, bound in ((1, hi), (-1, lo)):
+            have = self._fwd if sign == 1 else self._bwd
+            need = bound * sign
+            if need <= 0 or (have is not None and have[0] >= need):
+                continue
+            span = max(need * 1.25, 600.0)  # integrate a little beyond to avoid frequent re-integration
+            sol = solve_ivp(f, (0.0, sign * span), y0, method="DOP853", rtol=1e-11, atol=1e-9, dense_output=True)
+            if not sol.success:
+                raise RuntimeError(f"J2 integration failed: {sol.message}")
+            if sign == 1:
+                self._fwd = (span, sol.sol)
+            else:
+                self._bwd = (span, sol.sol)
 
     def propagate(self, start: Time, offsets_s: np.ndarray) -> PropagationResult:
         q = offsets_from(self.epoch, start) + np.asarray(offsets_s, dtype=float)
         n = len(q)
         r = np.full((n, 3), np.nan)
         v = np.full((n, 3), np.nan)
-        y0 = np.concatenate([self.r0, self.v0])
-
-        def f(_t, y):
-            return np.concatenate([y[3:], j2_accel(y[:3])])
-
-        for sign in (1, -1):
-            mask = (q >= 0) if sign == 1 else (q < 0)
-            if not np.any(mask):
-                continue
-            tq = q[mask]
-            order = np.argsort(sign * tq)
-            tq_sorted = tq[order]
-            t_end = float(tq_sorted[-1]) if len(tq_sorted) else 0.0
-            if t_end == 0.0:
-                r[mask] = self.r0
-                v[mask] = self.v0
-                continue
-            sol = solve_ivp(f, (0.0, t_end), y0, method="DOP853", rtol=1e-11, atol=1e-9, t_eval=tq_sorted, dense_output=False)
-            if not sol.success:
-                raise RuntimeError(f"J2 integration failed: {sol.message}")
-            out = sol.y.T
-            idx = np.where(mask)[0][order]
-            r[idx] = out[:, :3]
-            v[idx] = out[:, 3:]
+        if n:
+            self._ensure(float(q.min()), float(q.max()))
+        for mask, dense in ((q > 0, self._fwd), (q < 0, self._bwd)):
+            if np.any(mask):
+                y = dense[1](q[mask])
+                r[mask] = y[:3].T
+                v[mask] = y[3:].T
+        zero = q == 0
+        r[zero] = self.r0
+        v[zero] = self.v0
         valid = np.all(np.isfinite(r), axis=1)
         return PropagationResult(self.object_id, self.frame, r, v, valid, self.method)
 

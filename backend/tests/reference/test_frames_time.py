@@ -70,3 +70,19 @@ def test_leap_second_window_detection():
     b = Time("2017-01-01T12:00:00", scale="utc")
     assert window_contains_leap_second(a, b)
     assert not window_contains_leap_second(b, Time("2017-06-01T00:00:00", scale="utc"))
+
+
+def test_fast_teme_rotation_matches_astropy():
+    """Interpolated TEME->GCRF rotation vs direct astropy at off-knot instants."""
+    import astropy.units as u
+    from astropy.coordinates import GCRS, TEME, CartesianRepresentation
+
+    t = Time("2026-03-01T00:00:00", scale="utc") + np.linspace(0, 5 * 86400, 37) * u.s + 1234.5 * u.s
+    rng = np.random.default_rng(0)
+    r = rng.normal(size=(37, 3))
+    r = 7000.0 * r / np.linalg.norm(r, axis=1, keepdims=True)
+    fast, _ = convert(r, np.zeros_like(r), Frame.TEME, Frame.GCRF, t)
+    ref = TEME(CartesianRepresentation(r.T * u.km), obstime=t).transform_to(GCRS(obstime=t)).cartesian.xyz.to_value(u.km).T
+    assert np.max(np.linalg.norm(fast - ref, axis=1)) < 1e-6  # 1 mm
+    back, _ = convert(fast, np.zeros_like(r), Frame.GCRF, Frame.TEME, t)
+    assert np.allclose(back, r, atol=1e-9)

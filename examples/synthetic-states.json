@@ -1,0 +1,94 @@
+{
+  "schema": "astral-states/1",
+  "comment": "SYNTHETIC example states (not real objects)",
+  "objects": [
+    {
+      "object_id": "SYN-S1",
+      "object_name": "SYNTHETIC STATE 1",
+      "epoch": "2026-10-10T00:00:00",
+      "time_system": "UTC",
+      "frame": "GCRF",
+      "position_km": [
+        7000.0,
+        0.0,
+        0.0
+      ],
+      "velocity_km_s": [
+        0.0,
+        7.546,
+        0.0
+      ],
+      "hard_body_radius_m": 5.0,
+      "covariance": {
+        "frame": "RTN",
+        "units": "km",
+        "matrix": [
+          [
+            0.01,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.04,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0025,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1e-08,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1e-08,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1e-08
+          ]
+        ]
+      }
+    },
+    {
+      "object_id": "SYN-S2",
+      "epoch": "2026-10-10T00:00:00",
+      "time_system": "UTC",
+      "frame": "GCRF",
+      "position_km": [
+        7000.2,
+        0.0,
+        0.0
+      ],
+      "velocity_km_s": [
+        0.0,
+        0.0,
+        7.546
+      ]
+    }
+  ]
+}

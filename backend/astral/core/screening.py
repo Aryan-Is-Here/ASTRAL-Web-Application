@@ -8,14 +8,17 @@ Algorithm (documented in SCIENTIFIC_METHODS.md §4)
 2. Radial-band filter: an object's band is [min|r|, max|r|] over the grid,
    widened by max|v|·Δt/2. Two objects whose bands are further apart than the
    threshold D cannot approach within D, since |r1-r2| >= ||r1|-|r2||.
-3. Proximity flagging at each step with a k-d tree. If the true minimum
-   distance d* <= D occurs at t*, the nearest grid instant t_k satisfies
-   |t_k - t*| = τ <= Δt/2 and
-        |Δr(t_k)| <= D + |Δv(t_k)| τ + 1.5 a_max τ²,
-   where a_max bounds the relative acceleration (sum of both objects'
-   gravitational accelerations at the lowest sampled radius, +1% for J2).
-   A pair is flagged at t_k when this bound holds, so no minimum below D is
-   missed provided the propagator is valid at t_k.
+3. Proximity flagging at each step. A k-d tree first returns pairs within
+   the loose radius D + v_rel,max·Δt/2 + ½a_max(Δt/2)². Each candidate is
+   then tested with a tight, still conservative bound: around grid instant
+   t_k the relative position is Δr(t_k+τ) = Δr_k + Δv_k τ + e(τ) with
+   |e(τ)| <= ½ a_max τ², where a_max bounds the relative acceleration (sum of
+   both objects' gravitational accelerations at the lowest sampled radius,
+   +1% for J2). If the true minimum d* <= D occurs at t*, the nearest grid
+   instant has |t* - t_k| <= Δt/2, so the linear-motion minimum over
+   |τ| <= Δt/2 satisfies  d_lin <= D + ½ a_max (Δt/2)².  Pairs meeting this
+   are flagged; no minimum below D is missed while the propagator is valid at
+   t_k.
 4. Refinement: for each flagged (pair, t_k), roots of the range-rate
    function f(t) = Δr·Δv on [t_{k-1}, t_{k+1}] are found with Brent's method
    (xtol 1e-6 s) after sub-sampling for sign changes. Minima are kept when
@@ -204,7 +207,7 @@ def screen(
     r_floor = max(float(np.min(rmin[valid_any])), 6378.137 * 0.9) if valid_any.any() else 6378.137
     a_max = 2 * MU_EARTH_KM3_S2 / r_floor**2 * 1.01
     two_fastest = np.sort(vmax_obj)[-2:].sum()
-    search_r = cfg.threshold_km + two_fastest * half + 1.5 * a_max * half * half
+    search_r = cfg.threshold_km + two_fastest * half + 0.5 * a_max * half * half
 
     prim_mask = np.ones(N, dtype=bool)
     if cfg.primary_ids:
@@ -247,10 +250,12 @@ def screen(
         for p in zip(lo[~sep_ok].tolist(), hi[~sep_ok].tolist()):
             pairs_radial_eliminated.add(p)
         lo, hi = lo[sep_ok], hi[sep_ok]
-        dr = np.linalg.norm(R[hi, j] - R[lo, j], axis=1)
-        dv = np.linalg.norm(V[hi, j] - V[lo, j], axis=1)
-        bound = cfg.threshold_km + dv * half + 1.5 * a_max * half * half
-        hit = dr <= bound
+        drv = R[hi, j] - R[lo, j]
+        dvv = V[hi, j] - V[lo, j]
+        vv = np.einsum("ij,ij->i", dvv, dvv)
+        tau = np.clip(-np.einsum("ij,ij->i", drv, dvv) / np.where(vv > 0, vv, 1.0), -half, half)
+        d_lin = np.linalg.norm(drv + dvv * tau[:, None], axis=1)
+        hit = d_lin <= cfg.threshold_km + 0.5 * a_max * half * half
         for a, b in zip(lo[hit].tolist(), hi[hit].tolist()):
             flagged.setdefault((a, b), []).append(j)
             n_flag_events += 1

@@ -118,6 +118,56 @@ def _unpack(coord) -> tuple[np.ndarray, np.ndarray]:
     return np.atleast_2d(r), np.atleast_2d(v)
 
 
+# TEME -> GCRF is a slowly varying rotation (precession-nutation plus the
+# equation of the equinoxes). It is evaluated exactly with astropy at knots
+# KNOT_S apart and interpolated element-wise in between, then re-orthonormalised
+# (polar decomposition). Interpolation error is bounded in
+# tests/reference/test_frames_time.py (< 1 mm at 7000 km). The rotation
+# rate of TEME itself (~1e-11 rad/s) is neglected for velocities (< 1e-7 km/s).
+KNOT_S = 3600.0
+
+
+def _teme_to_gcrf_exact(times: Time) -> np.ndarray:
+    """(N,3,3) matrices M with r_gcrf = M @ r_teme, via astropy."""
+    t = Time(times)
+    t = t.reshape(-1) if t.shape else Time([t])
+    n = t.size
+    basis = np.eye(3)
+    cols = []
+    for k in range(3):
+        rep = CartesianRepresentation(np.tile(basis[k], (n, 1)).T * u.km)
+        c = TEME(rep, obstime=t).transform_to(GCRS(obstime=t))
+        cols.append(c.cartesian.xyz.to_value(u.km).T)
+    return np.stack(cols, axis=2)  # column k is the image of unit vector k
+
+
+def _orthonormalise(m: np.ndarray) -> np.ndarray:
+    uu, _, vt = np.linalg.svd(m)
+    return uu @ vt
+
+
+def teme_to_gcrf_matrices(times: Time) -> np.ndarray:
+    t = Time(times).utc
+    t = t.reshape(-1) if t.shape else Time([t])
+    jd = (t.jd1 - 2451545.0 + t.jd2) * 86400.0  # seconds from J2000 (UTC scale; interpolation variable only)
+    lo, hi = jd.min(), jd.max()
+    if hi - lo < 1.0:  # effectively one instant: no interpolation needed
+        return np.repeat(_teme_to_gcrf_exact(t[:1]), jd.size, axis=0)
+    k0 = np.floor(lo / KNOT_S) * KNOT_S
+    knots = np.arange(k0, hi + KNOT_S, KNOT_S)
+    kt = Time(2451545.0, knots / 86400.0, format="jd", scale="utc")
+    mk = _teme_to_gcrf_exact(kt)
+    out = np.empty((jd.size, 3, 3))
+    for i in range(3):
+        for j in range(3):
+            out[:, i, j] = np.interp(jd, knots, mk[:, i, j])
+    return _orthonormalise(out)
+
+
+def _apply(m: np.ndarray, x: np.ndarray) -> np.ndarray:
+    return np.einsum("nij,nj->ni", m, x)
+
+
 def to_gcrf(r: np.ndarray, v: np.ndarray, frame: Frame, times: Time) -> tuple[np.ndarray, np.ndarray]:
     """Convert (N,3) position/velocity arrays at N instants to GCRF."""
     r = np.atleast_2d(np.asarray(r, dtype=float))
@@ -127,8 +177,8 @@ def to_gcrf(r: np.ndarray, v: np.ndarray, frame: Frame, times: Time) -> tuple[np
     if frame is Frame.EME2000:
         return r @ _RB, v @ _RB  # row-vector form of rb.T @ x
     if frame is Frame.TEME:
-        c = TEME(_rep(r, v), obstime=times).transform_to(GCRS(obstime=times))
-        return _unpack(c)
+        m = _broadcast(teme_to_gcrf_matrices(times), len(r))
+        return _apply(m, r), _apply(m, v)
     if frame is Frame.ITRF:
         c = ITRS(_rep(r, v), obstime=times).transform_to(GCRS(obstime=times))
         return _unpack(c)
@@ -142,9 +192,19 @@ def gcrf_to(r: np.ndarray, v: np.ndarray, frame: Frame, times: Time) -> tuple[np
         return r.copy(), v.copy()
     if frame is Frame.EME2000:
         return r @ _RB.T, v @ _RB.T
-    target = {Frame.TEME: TEME, Frame.ITRF: ITRS}[frame]
-    c = GCRS(_rep(r, v), obstime=times).transform_to(target(obstime=times))
+    if frame is Frame.TEME:
+        m = np.transpose(_broadcast(teme_to_gcrf_matrices(times), len(r)), (0, 2, 1))
+        return _apply(m, r), _apply(m, v)
+    c = GCRS(_rep(r, v), obstime=times).transform_to(ITRS(obstime=times))
     return _unpack(c)
+
+
+def _broadcast(m: np.ndarray, n: int) -> np.ndarray:
+    if m.shape[0] == n:
+        return m
+    if m.shape[0] == 1:
+        return np.repeat(m, n, axis=0)
+    raise FrameError("times and vectors have incompatible lengths")
 
 
 def convert(r: np.ndarray, v: np.ndarray, src: Frame, dst: Frame, times: Time) -> tuple[np.ndarray, np.ndarray]:
