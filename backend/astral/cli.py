@@ -127,8 +127,7 @@ def seed_live(email: str, groups: list[str], hours: float, threshold_km: float, 
             parts.append(text)
             fetched.append(prov)
             print(f"fetched {g}: {sum(1 for ln in text.splitlines() if ln.startswith('1 '))} element sets")
-        if not parts:
-            sys.exit("no data fetched")
+        complete = len(parts) == len(groups)
         dataset_id = None
         if project_id is not None:
             p = db.get(Project, project_id)
@@ -136,6 +135,21 @@ def seed_live(email: str, groups: list[str], hours: float, threshold_km: float, 
                 sys.exit(f"no project {project_id}")
             ds = db.scalar(select(Dataset).where(Dataset.project_id == p.id, Dataset.name == "CelesTrak LEO selection"))
             dataset_id = ds.id if ds else None
+            if not complete:
+                # Some groups were not re-downloaded (CelesTrak's 2-hour rule or an outage). A new version
+                # would hold only part of the catalogue, so re-run the search on the latest complete version.
+                latest = ds.versions[-1] if ds and ds.versions else None
+                if latest is None:
+                    sys.exit("no data fetched and no existing dataset to re-search")
+                start = Time(datetime.now(UTC).replace(minute=0, second=0, microsecond=0, tzinfo=None), scale="utc")
+                submit(db, p.id, latest, {"kind": "screening", "start_utc": start.isot + "Z", "duration_hours": hours, "step_s": 30,
+                                          "threshold_km": threshold_km}, user.id)
+                n = run_pending_sync()
+                print(f"Data is recent (downloaded at {latest.created_at:%Y-%m-%d %H:%M} UTC), so it was kept.")
+                print(f"New search from {start.isot[:16]} UTC over the next {hours:g} h on dataset version {latest.version}; {n} job(s) executed.")
+                return
+        elif not complete:
+            sys.exit("not every group could be downloaded; nothing created")
         else:
             p = Project(name="Low Earth Orbit — public catalogue",
                         description="Public GP element sets from CelesTrak: crewed stations, bright satellites and three major debris clouds.",

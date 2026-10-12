@@ -135,7 +135,7 @@ Before the demo, open **At a glance** once so the pages are warm.
 
 ## 6. Checklist for the morning of the pitch
 
-1. Refresh the real data so passes are in the future (needs internet, about 1–6 minutes):
+1. Refresh the real data so passes are in the future (needs internet, about 1–6 minutes). If the data was downloaded less than 2 hours ago, CelesTrak asks us not to re-download it, so the command keeps it and simply re-runs the search from the current hour:
    ```bash
    cd backend
    .venv/Scripts/python -m astral.cli seed-live --email admin@astral.test --project 1
