@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { Job } from "../api/types";
 import { useProjectId } from "../components/Layout";
 import VersionPicker from "../components/VersionPicker";
-import { ChartMeta, Empty, ErrorView, JobStatus, Kv, PageHead, Panel, Seg } from "../components/ui";
+import { ChartMeta, Empty, ErrorView, Explain, JobStatus, Kv, PageHead, Panel, Seg } from "../components/ui";
 import { useDatasets, useJobs, versionsOf } from "../lib/hooks";
 import { utc } from "../lib/format";
 
@@ -38,7 +38,7 @@ function ScreeningForm({ pid }: { pid: number }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs", pid] }),
   });
   return (
-    <Panel title="Configure screening" meta="geometric close-approach screening">
+    <Panel title="New search" meta="uses every object in the chosen data">
       <form className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 14 }} onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}>
         <VersionPicker datasets={ds.data?.items} value={vid} onChange={setVid} filter={isProp} label="Dataset version (GP elements or ephemerides)" />
         <div className="grid cols-4">
@@ -76,7 +76,7 @@ function CdmForm({ pid }: { pid: number }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs", pid] }),
   });
   return (
-    <Panel title="Re-assess CDM" meta="states + covariances at TCA">
+    <Panel title="Check a conjunction message" meta="computes the chance of collision">
       <form className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 14 }} onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}>
         <VersionPicker datasets={ds.data?.items} value={vid} onChange={setVid} filter={isCdm} label="CDM dataset version" />
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -120,6 +120,7 @@ function Funnel({ job }: { job: Job }) {
         </ResponsiveContainer>
       </div>
       <ChartMeta units="object pairs (log scale)" source={`job #${job.id} statistics`} kind="computed" />
+          <Explain>The funnel shows how millions of possible pairs are narrowed down: pairs whose altitudes never overlap are dropped, then pairs that never get near each other, leaving the real close passes at the bottom.</Explain>
     </>
   );
 }
@@ -136,15 +137,15 @@ export default function Screening() {
   });
   return (
     <div className="page">
-      <PageHead eyebrow="04 Conjunction screening" title="Screening">
-        Grid propagation with a conservative proximity bound, k-d-tree candidate search and Brent refinement of the time of closest approach.
+      <PageHead eyebrow="Run a search" title="Search for close approaches">
+        Pick the data, a time window and a distance. ASTRAL predicts every object's path and lists every pair that comes closer than that distance, then pins down the exact moment of closest approach.
       </PageHead>
       <div className="grid cols-2">
         <ScreeningForm pid={pid} />
         <CdmForm pid={pid} />
       </div>
       <div className="grid cols-2">
-        <Panel title="Analysis jobs" meta={jobs.data ? `${jobs.data.total} total` : undefined}>
+        <Panel title="Searches" meta={jobs.data ? `${jobs.data.total} total` : undefined}>
           {jobs.data?.items.length === 0 && <Empty>No jobs yet.</Empty>}
           {jobs.error && <ErrorView error={jobs.error} />}
           <div className="table-wrap" style={{ maxHeight: 520, overflowY: "auto" }}>

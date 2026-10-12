@@ -152,7 +152,7 @@ export default function Datasets() {
   const current = sel ?? versions[0]?.v.id ?? null;
   return (
     <div className="page">
-      <PageHead eyebrow="07 Datasets & uploads" title="Datasets">Upload, validate and review orbital data. Every analysis references one immutable dataset version.</PageHead>
+      <PageHead eyebrow="Data sources" title="Where the orbit data comes from">Load public data or upload your own; every file is checked before use. Every analysis references one immutable dataset version.</PageHead>
       <div className="grid cols-2">
         <Upload pid={pid} onDone={done} />
         <Provider pid={pid} onDone={done} />

@@ -28,7 +28,7 @@ export default function MlLab() {
   const cal = tm?.calibration ? tm.calibration.mean_predicted.map((p, i) => ({ predicted: p, observed: tm.calibration!.fraction_positive[i], ideal: p })) : [];
   return (
     <div className="page">
-      <PageHead eyebrow="08 ML laboratory" title="ML laboratory" actions={me?.user.is_admin && (
+      <PageHead eyebrow="AI ranking (beta)" title="AI-assisted ranking" actions={me?.user.is_admin && (
         <button className="btn primary" disabled={trainM.isPending || models.data?.training?.status === "running"} onClick={() => trainM.mutate()}>
           {models.data?.training?.status === "running" ? "Training…" : "Train new experimental model"}
         </button>)}>

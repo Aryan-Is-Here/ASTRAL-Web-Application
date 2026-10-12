@@ -22,16 +22,16 @@ export default function Login() {
         <span className="brand" style={{ fontSize: 18 }}>ASTRAL</span>
         <div style={{ display: "flex", gap: 28, fontSize: 14 }} className="muted">
           <a href="/docs" target="_blank" rel="noreferrer">API</a>
-          <span>Method</span><span>Scenarios</span><span>Reports</span>
+          <span>Track</span><span>Find</span><span>Act</span>
         </div>
       </div>
       <div className="ramp" aria-hidden />
       <main style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 380px), 1fr))", gap: 40, padding: "56px 28px", alignItems: "center", maxWidth: 1280, margin: "0 auto", width: "100%" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
           <span className="eyebrow">Advanced Space Traffic Risk Assessment &amp; Analysis Laboratory</span>
-          <h1 style={{ fontSize: 52, lineHeight: 1.02, textWrap: "balance" }}>Close-approach analysis you can trace from ingest to report.</h1>
+          <h1 style={{ fontSize: 52, lineHeight: 1.02, textWrap: "balance" }}>Spot satellites about to pass too close — and test how to avoid it.</h1>
           <p className="muted" style={{ maxWidth: "46ch", fontSize: 17, margin: 0 }}>
-            Ingest orbital data, screen for conjunctions, study encounter geometry and uncertainty, and compare scenarios in one auditable workspace.
+            ASTRAL tracks thousands of satellites and pieces of debris, predicts every close approach, and simulates small manoeuvres that would keep them apart.
           </p>
           <form onSubmit={submit} className="card" style={{ maxWidth: 420 }} aria-label="Sign in">
             <label className="field">Email<input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>

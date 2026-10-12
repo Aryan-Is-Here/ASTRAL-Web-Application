@@ -30,8 +30,8 @@ export default function Catalogue() {
   );
   return (
     <div className="page">
-      <PageHead eyebrow="02 Orbital catalogue" title="Catalogue">
-        Normalised records of one dataset version. Mean-element fields (perigee, apogee, period) are SGP4 mean elements, not osculating values.
+      <PageHead eyebrow="Tracked objects" title="Everything we track">
+        Every satellite and debris object in the chosen data: its lowest and highest altitude, tilt, time per orbit, and how old its data is.
       </PageHead>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
         <VersionPicker datasets={ds.data?.items} value={vid} onChange={(v) => { setVid(v); setPage(0); }} />

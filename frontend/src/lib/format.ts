@@ -22,3 +22,8 @@ export function ageLabel(days: number): string {
 
 /** Display bands for computed Pc only. These are presentation bands, not operational criteria. */
 export const PC_BANDS = { high: 1e-4, elevated: 1e-7 };
+
+/** Parse a server timestamp as UTC even when it carries no timezone (SQLite returns naive UTC). */
+export function parseUtc(s: string): number {
+  return Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : `${s.replace(" ", "T")}Z`);
+}

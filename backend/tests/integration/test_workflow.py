@@ -62,6 +62,10 @@ def test_full_screening_workflow(app, users):
     assert all(abs(a - b) < 0.1 for a, b in zip(r0, p0["r_km"]))
     traj = c.get(f"/api/v1/projects/{pid}/viz/trajectory", params={"vid": dv["id"], "object_id": e["primary_id"], "start": "2026-10-10T00:00:00Z"}).json()
     assert len(traj["r_km"]) == 200
+    mo = c.get(f"/api/v1/projects/{pid}/encounters/{e['id']}/maneuver-options").json()
+    assert abs(mo["baseline_miss_km"] - e["miss_km"]) < 1e-3  # baseline equals the screening result
+    assert len(mo["options"]) == 3 * 5 * 4 and mo["label"].startswith("SIMULATION ONLY")
+    assert "recommend" not in str(mo["options"]).lower()
     sc = c.post(f"/api/v1/projects/{pid}/encounters/{e['id']}/scenarios",
                 json={"name": "T+0.1", "burn_minutes_before_tca": 90, "dv_t_m_s": 0.1, "screen_other_objects": True})
     assert sc.status_code == 201, sc.text

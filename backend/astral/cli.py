@@ -24,7 +24,7 @@ from pathlib import Path
 from astropy.time import Time
 from sqlalchemy import select
 
-from .db.models import MLModel, Project, ProjectMember, SystemInfo, User
+from .db.models import Dataset, MLModel, Project, ProjectMember, SystemInfo, User
 
 
 def migrate() -> None:
@@ -104,7 +104,7 @@ def seed_demo(email: str) -> None:
 LIVE_GROUPS = ("stations", "visual", "iridium-33-debris", "cosmos-2251-debris", "fengyun-1c-debris")
 
 
-def seed_live(email: str, groups: list[str], hours: float, threshold_km: float) -> None:
+def seed_live(email: str, groups: list[str], hours: float, threshold_km: float, project_id: int | None = None) -> None:
     """Project with real public GP data from CelesTrak, screened over the next `hours`."""
     from .db.session import SessionLocal
     from .services.datasets import create_version
@@ -129,21 +129,29 @@ def seed_live(email: str, groups: list[str], hours: float, threshold_km: float) 
             print(f"fetched {g}: {sum(1 for ln in text.splitlines() if ln.startswith('1 '))} element sets")
         if not parts:
             sys.exit("no data fetched")
-        p = Project(name="Low Earth Orbit — public catalogue",
-                    description="Public GP element sets from CelesTrak: crewed stations, bright satellites and three major debris clouds.",
-                    created_by=user.id)
-        db.add(p)
-        db.flush()
-        db.add(ProjectMember(project_id=p.id, user_id=user.id, role="owner"))
-        db.commit()
-        dv = create_version(db, p.id, user.id, "celestrak-leo.tle", "".join(parts).encode(), dataset_name="CelesTrak LEO selection",
+        dataset_id = None
+        if project_id is not None:
+            p = db.get(Project, project_id)
+            if p is None:
+                sys.exit(f"no project {project_id}")
+            ds = db.scalar(select(Dataset).where(Dataset.project_id == p.id, Dataset.name == "CelesTrak LEO selection"))
+            dataset_id = ds.id if ds else None
+        else:
+            p = Project(name="Low Earth Orbit — public catalogue",
+                        description="Public GP element sets from CelesTrak: crewed stations, bright satellites and three major debris clouds.",
+                        created_by=user.id)
+            db.add(p)
+            db.flush()
+            db.add(ProjectMember(project_id=p.id, user_id=user.id, role="owner"))
+            db.commit()
+        dv = create_version(db, p.id, user.id, "celestrak-leo.tle", "".join(parts).encode(), dataset_id=dataset_id, dataset_name="CelesTrak LEO selection",
                             origin="provider", provenance={"provider": "CelesTrak", "groups": groups, "fetches": fetched,
                                                            "authority": "public GP data; not operationally authoritative"})
         start = Time(datetime.now(UTC).replace(minute=0, second=0, microsecond=0, tzinfo=None), scale="utc")
         submit(db, p.id, dv, {"kind": "screening", "start_utc": start.isot + "Z", "duration_hours": hours, "step_s": 30,
                               "threshold_km": threshold_km}, user.id)
         n = run_pending_sync()
-        print(f"live project {p.id} created ({dv.stats.get('objects')} objects); {n} jobs executed")
+        print(f"live project {p.id}: dataset version {dv.version} ({dv.stats.get('objects')} objects); {n} jobs executed")
     finally:
         db.close()
 
@@ -224,6 +232,7 @@ def main(argv: list[str] | None = None) -> None:
     lv.add_argument("--groups", default=",".join(LIVE_GROUPS))
     lv.add_argument("--hours", type=float, default=24.0)
     lv.add_argument("--threshold", type=float, default=2.0)
+    lv.add_argument("--project", type=int, help="refresh an existing project instead of creating one")
     t = sub.add_parser("train-ml")
     t.add_argument("--activate", action="store_true")
     sub.add_parser("run-jobs")
@@ -240,7 +249,7 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "seed-demo":
         seed_demo(args.email)
     elif args.cmd == "seed-live":
-        seed_live(args.email, [g.strip() for g in args.groups.split(",") if g.strip()], args.hours, args.threshold)
+        seed_live(args.email, [g.strip() for g in args.groups.split(",") if g.strip()], args.hours, args.threshold, args.project)
     elif args.cmd == "train-ml":
         train_ml(args.activate)
     elif args.cmd == "run-jobs":

@@ -64,16 +64,16 @@ export function Stat({ label, value, hint }: { label: string; value: ReactNode; 
 /** Pc status badge. Colour is secondary to the text; geometry alone never produces a risk badge. */
 export function PcBadge({ status, value }: { status: string; value: number | null }) {
   if (status !== "COMPUTED" || value === null) {
-    const label = status === "INSUFFICIENT_DATA_FOR_PC" ? "No Pc · insufficient data" : status.replace(/_/g, " ").toLowerCase();
-    return <span className="badge" title="Probability of collision was not computed. See the encounter's probability panel for the missing inputs.">{label}</span>;
+    const label = status === "INSUFFICIENT_DATA_FOR_PC" ? "Probability: needs uncertainty data" : status.replace(/_/g, " ").toLowerCase();
+    return <span className="badge" title="Collision probability needs position-uncertainty data for both objects. Public tracking data does not include it, so only the distance is reported.">{label}</span>;
   }
   const band = value >= PC_BANDS.high ? "alert" : value >= PC_BANDS.elevated ? "warn" : "";
-  const text = value >= PC_BANDS.high ? `Pc ≥ 1e-4` : value >= PC_BANDS.elevated ? "Pc 1e-7–1e-4" : "Pc < 1e-7";
+  const text = value >= PC_BANDS.high ? "Higher probability (≥ 1 in 10,000)" : value >= PC_BANDS.elevated ? "Low probability" : "Very low probability";
   return <span className={`badge ${band}`} title={`Pc = ${sci(value, 3)}. Display bands are presentation aids, not operational thresholds.`}>{text}</span>;
 }
 
 export function JobStatus({ status }: { status: string }) {
-  const cls = ["succeeded", "screened", "assessed"].includes(status) ? "ok" : status === "failed" ? "alert" : status === "running" ? "acc" : "";
+  const cls = ["succeeded", "screened", "assessed", "done"].includes(status) ? "ok" : status === "failed" ? "alert" : status === "running" ? "acc" : "";
   return <span className={`badge ${cls}`}>{status}</span>;
 }
 
@@ -107,6 +107,16 @@ export function ChartMeta({ units, time, source, kind }: { units: string; time?:
       {time && <span>Time: {time}</span>}
       <span>Source: {source}</span>
       <span className="badge">{kind}</span>
+    </div>
+  );
+}
+
+/** Plain-language explanation shown under a chart or section. */
+export function Explain({ children, title = "What this shows" }: { children: ReactNode; title?: string }) {
+  return (
+    <div className="explain">
+      <span className="label" style={{ color: "var(--accT)" }}>{title}</span>
+      <div>{children}</div>
     </div>
   );
 }

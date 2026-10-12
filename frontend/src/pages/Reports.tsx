@@ -28,7 +28,7 @@ export default function Reports() {
   const [dlErr, setDlErr] = useState<unknown>(null);
   return (
     <div className="page">
-      <PageHead eyebrow="10 Reports" title="Reports">
+      <PageHead eyebrow="Reports" title="Reports you can hand over">
         Reproducible reports: analysis id, input hashes, configuration, software and algorithm versions, results, data quality and limitations. Files are stored with their SHA-256 and verified on download.
       </PageHead>
       <div className="grid cols-2">

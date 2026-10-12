@@ -6,9 +6,9 @@ import { api, downloadCsv, qs } from "../api/client";
 import type { CatalogueRow, Encounter, Finding, Paged } from "../api/types";
 import { useProjectId } from "../components/Layout";
 import VersionPicker from "../components/VersionPicker";
-import { ChartMeta, Empty, PageHead, Panel, PcBadge } from "../components/ui";
+import { ChartMeta, Empty, Explain, PageHead, Panel, PcBadge } from "../components/ui";
 import { useDatasets, useEncounters, useJobs, versionsOf } from "../lib/hooks";
-import { km, kms, utc } from "../lib/format";
+import { km, kms, parseUtc, utc } from "../lib/format";
 
 const tip = { contentStyle: { background: "var(--s1)", border: "1px solid var(--hair)", fontSize: 12 } };
 const axis = { stroke: "var(--muted)", fontSize: 11 };
@@ -37,7 +37,7 @@ export default function Analytics() {
     const bins = [0, 1, 2, 3, 5, 7, 14, 30, 90, Infinity];
     const counts = bins.slice(0, -1).map((b, i) => ({ bin: `${b}–${bins[i + 1] === Infinity ? "∞" : bins[i + 1]} d`, n: 0 }));
     for (const r of cat.data?.items ?? []) {
-      const a = (refTime - Date.parse(r.epoch)) / 86400000;
+      const a = (refTime - parseUtc(r.epoch)) / 86400000;
       const i = bins.findIndex((b, k) => a >= b && a < bins[k + 1]!);
       if (i >= 0) counts[i]!.n++;
     }
@@ -61,8 +61,8 @@ export default function Analytics() {
 
   return (
     <div className="page">
-      <PageHead eyebrow="06 Scientific analytics" title="Analytics">
-        Every chart is drawn from stored analysis results. Units, time convention, source and data kind are stated under each chart; CSV exports contain exactly the plotted values.
+      <PageHead eyebrow="Charts" title="The results as charts">
+        Every chart is drawn from stored results and can be downloaded as CSV. A short note under each one explains how to read it.
       </PageHead>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
         <label className="field">Analysis run<select value={jid ?? ""} onChange={(e) => { setJobId(Number(e.target.value)); setSel(null); }}>
@@ -71,7 +71,7 @@ export default function Analytics() {
         <VersionPicker datasets={ds.data?.items} value={v} onChange={setVid} label="Dataset version (quality charts)" />
       </div>
       <div className="grid cols-2">
-        <Panel title="Encounter timeline" meta="miss distance at TCA" actions={<button className="btn small" onClick={() => downloadCsv(`timeline-job${jid}.csv`, ["encounter_id", "tca_utc", "miss_km", "rel_speed_km_s"], pts.map((p) => [p.id, p.e.tca_utc, p.miss, p.speed]), [`job ${jid}`])}>CSV</button>}>
+        <Panel title="When and how close" meta="each dot is one close pass" actions={<button className="btn small" onClick={() => downloadCsv(`timeline-job${jid}.csv`, ["encounter_id", "tca_utc", "miss_km", "rel_speed_km_s"], pts.map((p) => [p.id, p.e.tca_utc, p.miss, p.speed]), [`job ${jid}`])}>CSV</button>}>
           {pts.length === 0 ? <Empty>No encounters in this run.</Empty> : (
             <div className="chart-box">
               <ResponsiveContainer>
@@ -87,8 +87,9 @@ export default function Analytics() {
             </div>
           )}
           <ChartMeta units="km vs TCA" time="UTC" source={`job #${jid ?? "—"}`} kind={jobKind} />
+          <Explain>Left to right is time; lower dots are closer passes. Clusters show busy periods. Click a dot to open that close pass.</Explain>
         </Panel>
-        <Panel title="Miss distance vs relative speed" meta="encounter geometry" actions={<button className="btn small" onClick={() => downloadCsv(`miss-speed-job${jid}.csv`, ["encounter_id", "rel_speed_km_s", "miss_km"], pts.map((p) => [p.id, p.speed, p.miss]))}>CSV</button>}>
+        <Panel title="Distance vs impact speed" meta="each dot is one close pass" actions={<button className="btn small" onClick={() => downloadCsv(`miss-speed-job${jid}.csv`, ["encounter_id", "rel_speed_km_s", "miss_km"], pts.map((p) => [p.id, p.speed, p.miss]))}>CSV</button>}>
           {pts.length > 0 && (
             <div className="chart-box">
               <ResponsiveContainer>
@@ -104,6 +105,7 @@ export default function Analytics() {
             </div>
           )}
           <ChartMeta units="km, km/s" source={`job #${jid ?? "—"}`} kind={jobKind} />
+          <Explain>How fast the two objects would hit each other (right = faster) against how close they pass (down = closer). Dots low and to the right are the most serious: close and very fast.</Explain>
         </Panel>
       </div>
       {sel && (
@@ -113,7 +115,7 @@ export default function Analytics() {
         </div>
       )}
       <div className="grid cols-2">
-        <Panel title="Data freshness" meta="element-set / state age relative to now" actions={<button className="btn small" onClick={() => downloadCsv(`freshness-v${v}.csv`, ["age_bin", "records"], ages.map((a) => [a.bin, a.n]))}>CSV</button>}>
+        <Panel title="How fresh is the data" meta="age of each object's last orbit update" actions={<button className="btn small" onClick={() => downloadCsv(`freshness-v${v}.csv`, ["age_bin", "records"], ages.map((a) => [a.bin, a.n]))}>CSV</button>}>
           <div className="chart-box" style={{ height: 240 }}>
             <ResponsiveContainer>
               <BarChart data={ages} margin={{ left: 8, right: 20, top: 12, bottom: 12 }}>
@@ -124,8 +126,9 @@ export default function Analytics() {
             </ResponsiveContainer>
           </div>
           <ChartMeta units="record count per age bin (days)" time="UTC epochs vs browser clock" source={`dataset version #${v ?? "—"} (first 500 records)`} kind="supplied" />
+          <Explain>Orbit data gets less accurate as it ages. Most bars should sit on the left (recent). Objects older than about 3 days are flagged as stale.</Explain>
         </Panel>
-        <Panel title="Validation findings" meta="errors and warnings by code" actions={<button className="btn small" onClick={() => downloadCsv(`findings-v${v}.csv`, ["code", "errors", "warnings", "info"], fcounts.map((f) => [f.code, f.error, f.warning, f.info]))}>CSV</button>}>
+        <Panel title="Data quality checks" meta="problems found when the data was loaded" actions={<button className="btn small" onClick={() => downloadCsv(`findings-v${v}.csv`, ["code", "errors", "warnings", "info"], fcounts.map((f) => [f.code, f.error, f.warning, f.info]))}>CSV</button>}>
           {fcounts.length === 0 ? <Empty>No findings for this version.</Empty> : (
             <div className="chart-box" style={{ height: 240 }}>
               <ResponsiveContainer>
@@ -141,10 +144,11 @@ export default function Analytics() {
             </div>
           )}
           <ChartMeta units="finding count" source={`dataset version #${v ?? "—"} validation`} kind="computed" />
+          <Explain>Every record is checked on upload. Red bars are errors (that record is not used); yellow bars are warnings to be aware of, such as stale or duplicate entries.</Explain>
         </Panel>
       </div>
       <div className="grid cols-2">
-        <Panel title="Covariance diagnostics" meta="position 1σ from the supplied covariance diagonal (RTN or inertial as supplied)">
+        <Panel title="Position uncertainty" meta="how well each object's position is known (1σ)">
           {covRows.length === 0 ? <Empty>This dataset version contains no covariance (e.g. TLE/OMM). Choose a CDM or OEM dataset.</Empty> : (
             <div className="table-wrap"><table className="data">
               <thead><tr><th>Object</th><th>Frame</th><th className="num">σ₁ m</th><th className="num">σ₂ m</th><th className="num">σ₃ m</th><th className="num">Condition no.</th><th>Valid</th></tr></thead>
@@ -153,7 +157,7 @@ export default function Analytics() {
           )}
           <ChartMeta units="metres; condition number dimensionless (6×6)" source={`dataset version #${v ?? "—"}`} kind="supplied" />
         </Panel>
-        <Panel title="Runtime & scalability" meta="screening benchmark (python -m astral.cli benchmark)">
+        <Panel title="Speed of the search" meta="time taken as the number of objects grows">
           {!bench ? <Empty>No benchmark stored. Run <span className="mono">python -m astral.cli benchmark</span> on this host.</Empty> : (<>
             <div className="chart-box" style={{ height: 230 }}>
               <ResponsiveContainer>

@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import type { EncounterDetail, Scenario } from "../api/types";
 import EncounterPlane from "../components/EncounterPlane";
 import { useProjectId } from "../components/Layout";
-import { Empty, ErrorView, JobStatus, Loading, PageHead, PcBadge, Seg } from "../components/ui";
+import { Empty, ErrorView, Explain, JobStatus, Loading, PageHead, PcBadge, Seg } from "../components/ui";
 import { useEncounters, useJobs } from "../lib/hooks";
 import { km, kms, sci, untilTca, utc } from "../lib/format";
 
@@ -30,37 +30,37 @@ export default function Encounters() {
   const pc = detail.data?.probability[0]?.result;
   const hours = (job?.config.duration_hours as number | undefined) ?? null;
   if (jobs.isLoading) return <div className="page"><Loading /></div>;
-  if (!done.length) return <div className="page"><PageHead eyebrow="05 Encounter investigations" title="Encounters" /><Empty>No completed analyses. Run a screening first.</Empty></div>;
+  if (!done.length) return <div className="page"><PageHead eyebrow="Close approaches" title="Close approaches" /><Empty>No results yet. Use “Run a search” first.</Empty></div>;
   return (
     <div className="page">
-      <PageHead eyebrow="05 Encounter investigations" title="Analysis workspace">
-        Geometric screening results. A small miss distance is not a collision prediction; probability is shown only where covariance and hard-body radius allow it.
+      <PageHead eyebrow="Close approaches" title="Every predicted close pass">
+        Each row is a moment when two objects are predicted to pass closer than the search distance. A small distance is a warning sign, not a collision prediction.
       </PageHead>
       <div className="panel">
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16, padding: "calc(var(--d)*12px) 20px", borderBottom: "var(--rw) solid var(--rule)", background: "var(--s1)" }}>
           <span className="brand" style={{ fontSize: 14 }}>ASTRAL</span>
-          <span className="muted">Analyses / <label className="sr-only" htmlFor="jobsel">Run</label>
+          <span className="muted">Search: <label className="sr-only" htmlFor="jobsel">Run</label>
             <select id="jobsel" className="input" style={{ padding: "2px 6px" }} value={jobId} onChange={(e) => setParams({ job: e.target.value })}>
-              {done.map((j) => <option key={j.id} value={j.id}>Run {String(j.id).padStart(4, "0")} · {j.kind.replace("_", " ")}</option>)}
+              {done.map((j) => <option key={j.id} value={j.id}>#{j.id} · {j.kind === "screening" ? "close-approach search" : "conjunction message check"}</option>)}
             </select>
           </span>
           <span style={{ marginLeft: "auto" }} className="mono muted">{job?.config.start_utc ? `Epoch ${utc(String(job.config.start_utc))}` : `TCA from CDM`}</span>
-          {job && <JobStatus status={job.status === "succeeded" ? (job.kind === "screening" ? "screened" : "assessed") : job.status} />}
+          {job && <JobStatus status={job.status === "succeeded" ? "done" : job.status} />}
         </div>
         <div className="grid cols-2" style={{ gap: 0 }}>
           <div style={{ borderRight: "1px solid var(--hair)", minWidth: 0 }}>
             <div className="panel-head" style={{ borderBottom: 0 }}>
-              <h3>Conjunctions</h3>
+              <h3>Predicted close passes</h3>
               <span className="muted" style={{ fontSize: 13 }}>{enc.data?.total ?? 0} events{hours ? ` · ${hours} h window` : ""}{job?.config.threshold_km ? ` · ≤ ${String(job.config.threshold_km)} km` : " · CDM-supplied TCA"}</span>
             </div>
             <div style={{ display: "flex", gap: 10, padding: "0 20px 10px", flexWrap: "wrap", alignItems: "center" }}>
-              <Seg label="Sort" value={sort} onChange={setSort} options={[{ value: "tca", label: "TCA" }, { value: "miss", label: "Miss" }, { value: "pc", label: "Pc" }, { value: "ml", label: "ML priority" }]} />
-              <input className="input mono" style={{ width: 140 }} placeholder="max miss km" value={maxMiss} onChange={(e) => setMaxMiss(e.target.value)} aria-label="Maximum miss distance in km" />
+              <Seg label="Sort" value={sort} onChange={setSort} options={[{ value: "tca", label: "Soonest" }, { value: "miss", label: "Closest" }, { value: "pc", label: "Probability" }, { value: "ml", label: "AI rank" }]} />
+              <input className="input mono" style={{ width: 140 }} placeholder="max distance, km" value={maxMiss} onChange={(e) => setMaxMiss(e.target.value)} aria-label="Maximum miss distance in km" />
             </div>
             {enc.error && <ErrorView error={enc.error} />}
             <div className="table-wrap" style={{ maxHeight: 560, overflowY: "auto" }}>
               <table className="data">
-                <thead><tr><th>Event</th><th>Objects</th><th>TCA</th><th className="num">Miss</th><th className="num">Pc</th><th>Probability</th></tr></thead>
+                <thead><tr><th>Event</th><th>Objects</th><th title="Time of closest approach, counted from now">When</th><th className="num">Distance</th><th className="num">Probability</th><th>Status</th></tr></thead>
                 <tbody>
                   {items.map((e) => (
                     <tr key={e.id} className={`clickable ${e.id === selected?.id ? "selected" : ""}`} onClick={() => setSel(e.id)} aria-selected={e.id === selected?.id}
@@ -80,19 +80,20 @@ export default function Encounters() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
             <div className="panel-head" style={{ borderBottom: 0 }}>
-              <h3>Encounter geometry</h3>
+              <h3>How they pass each other</h3>
               {selected && <Link className="mono" style={{ color: "var(--accT)", fontSize: 13 }} to={`/p/${pid}/encounters/${selected.id}`}>EVT-{String(selected.id).padStart(4, "0")} · investigate →</Link>}
             </div>
             {selected ? (
               <>
                 <div style={{ margin: "0 20px" }}>
                   <EncounterPlane miss={selected.geometry.miss_in_plane_km} cov={pc?.details.projected_cov_km2} hbrKm={pc?.details.hbr_km} />
+                  <Explain title="How to read this">Imagine looking along the direction the two objects approach each other. The white dot is the first object; the red dot is where the second one passes. The gap between them is the closest distance. Dashed ellipses appear only when we know how uncertain the positions are.</Explain>
                 </div>
                 <div className="stats" style={{ margin: "calc(var(--d)*16px) 20px calc(var(--d)*20px)", gridTemplateColumns: "repeat(2, minmax(0,1fr))" }}>
-                  <div className="stat"><span className="label">Miss distance</span><span className="v" style={{ fontSize: 18 }}>{km(selected.miss_km)}</span></div>
+                  <div className="stat"><span className="label">Closest distance</span><span className="v" style={{ fontSize: 18 }}>{km(selected.miss_km)}</span></div>
                   <div className="stat"><span className="label">Probability</span><span className="v" style={{ fontSize: 18 }}>{selected.pc_value === null ? "not computed" : sci(selected.pc_value, 2)}</span></div>
-                  <div className="stat"><span className="label">Rel. velocity</span><span className="v" style={{ fontSize: 18 }}>{kms(selected.rel_speed_km_s)}</span></div>
-                  <div className="stat"><span className="label">Covariance</span><span style={{ fontSize: 15, paddingTop: 2 }}>{{ both: "Available", partial: "Partial", none: "Missing" }[selected.covariance_available]}</span></div>
+                  <div className="stat"><span className="label">Speed between them</span><span className="v" style={{ fontSize: 18 }}>{kms(selected.rel_speed_km_s)}</span></div>
+                  <div className="stat"><span className="label">Uncertainty data</span><span style={{ fontSize: 15, paddingTop: 2 }}>{{ both: "Available", partial: "Partial", none: "Missing" }[selected.covariance_available]}</span></div>
                 </div>
               </>
             ) : <Empty>Select an event.</Empty>}
@@ -101,7 +102,7 @@ export default function Encounters() {
         {selected && (
           <div style={{ borderTop: "var(--rw) solid var(--rule)" }}>
             <div className="panel-head" style={{ borderBottom: 0 }}>
-              <h3>Scenario comparison</h3>
+              <h3>Avoidance options</h3>
               <span className="muted" style={{ fontSize: 13 }}>EVT-{String(selected.id).padStart(4, "0")} · hypothetical manoeuvres · simulation only</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", borderTop: "1px solid var(--hair)" }}>

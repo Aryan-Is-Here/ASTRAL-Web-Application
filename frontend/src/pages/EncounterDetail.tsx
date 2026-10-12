@@ -7,7 +7,7 @@ import type { EncounterDetail as Detail, RelativeMotion } from "../api/types";
 import EncounterPlane from "../components/EncounterPlane";
 import { useProjectId } from "../components/Layout";
 import RelativeScene from "../scene/RelativeScene";
-import { ChartMeta, ErrorView, Kv, Loading, PageHead, Panel, PcBadge, Seg } from "../components/ui";
+import { ChartMeta, ErrorView, Explain, Kv, Loading, PageHead, Panel, PcBadge, Seg } from "../components/ui";
 import { ageLabel, km, kms, sci, untilTca, utc } from "../lib/format";
 
 export default function EncounterDetail() {
@@ -28,7 +28,7 @@ export default function EncounterDetail() {
   const kind = e.job.kind === "cdm_assessment" ? "supplied" : "propagated";
   return (
     <div className="page">
-      <PageHead eyebrow={`05 Encounter investigation · EVT-${String(e.id).padStart(4, "0")}`} title={`${e.primary_name ?? e.primary_id} × ${e.secondary_name ?? e.secondary_id}`} actions={<>
+      <PageHead eyebrow={`Close approach · EVT-${String(e.id).padStart(4, "0")}`} title={`${e.primary_name ?? e.primary_id} × ${e.secondary_name ?? e.secondary_id}`} actions={<>
         <PcBadge status={e.pc_status} value={e.pc_value} />
         {e.job.kind === "screening" && <Link className="btn" to={`/p/${pid}/scenarios?encounter=${e.id}`}>Simulate manoeuvre</Link>}
         <Link className="btn" to={`/p/${pid}/environment?encounter=${e.id}`}>View in 3D</Link>
@@ -39,14 +39,14 @@ export default function EncounterDetail() {
       </PageHead>
       {cdmErr !== null && <ErrorView error={cdmErr} />}
       <div className="stats">
-        <div className="stat"><span className="label">Miss distance</span><span className="v">{km(e.miss_km, 4)}</span></div>
-        <div className="stat"><span className="label">Relative speed</span><span className="v">{kms(e.rel_speed_km_s, 3)}</span></div>
-        <div className="stat"><span className="label">Radial / in-track / cross-track</span><span className="v" style={{ fontSize: 15 }}>{e.geometry.rel_pos_rtn_km.map((x) => x.toFixed(3)).join(" / ")} km</span></div>
-        <div className="stat"><span className="label">Approach angle</span><span className="v">{e.geometry.approach_angle_deg.toFixed(1)}°</span></div>
+        <div className="stat"><span className="label">Closest distance</span><span className="v">{km(e.miss_km, 4)}</span></div>
+        <div className="stat"><span className="label">Speed between them</span><span className="v">{kms(e.rel_speed_km_s, 3)}</span></div>
+        <div className="stat"><span className="label" title="radial / along-track / cross-track">Offset: up-down / ahead-behind / side</span><span className="v" style={{ fontSize: 15 }}>{e.geometry.rel_pos_rtn_km.map((x) => x.toFixed(3)).join(" / ")} km</span></div>
+        <div className="stat"><span className="label">Crossing angle</span><span className="v">{e.geometry.approach_angle_deg.toFixed(1)}°</span></div>
         <div className="stat"><span className="label">Probability</span><span className="v" style={{ fontSize: 17 }}>{e.pc_value === null ? "not computed" : sci(e.pc_value, 3)}</span></div>
       </div>
       <div className="grid cols-2">
-        <Panel title="Relative motion" meta="secondary in primary's RTN frame" actions={<>
+        <Panel title="Distance over time" meta="seen from the first object" actions={<>
           <Seg label="Time span" value={span} onChange={setSpan} options={[{ value: "120", label: "±2 min" }, { value: "600", label: "±10 min" }, { value: "3600", label: "±1 h" }]} />
           <button className="btn small" disabled={!rm.data} onClick={() => downloadCsv(`relative-motion-${e.id}.csv`, ["t_s", "range_km", "radial_km", "intrack_km", "crosstrack_km"],
             rows.map((r) => [r.t, r.range, r.r, r.tt, r.n]), [`encounter ${e.id}`, `TCA ${e.tca_utc}`, rm.data?.data_kind ?? ""])}>CSV</button>
@@ -69,14 +69,16 @@ export default function EncounterDetail() {
             </ResponsiveContainer>
           </div>
           <ChartMeta units="km vs seconds from TCA" time="UTC (TCA reference)" source={rm.data?.data_kind ?? "—"} kind={kind} />
+          <Explain>The red line is the distance between the two objects; it dips to its minimum at the dashed line (closest approach, TCA). The other lines split that distance into up-down (radial), ahead-behind (along-track) and sideways (cross-track) parts.</Explain>
         </Panel>
-        <Panel title="Encounter geometry" meta="relative trajectory around TCA (RTN)">
+        <Panel title="The pass in 3D" meta="drag to rotate">
           <div style={{ height: 300 }}>{rm.data ? <RelativeScene rtn={rm.data.rtn_km} t={rm.data.t_s} /> : <Loading />}</div>
           <ChartMeta units="km" source={rm.data?.data_kind ?? "—"} kind={kind} />
+          <Explain>The first object sits at the centre. The orange curve is the path of the second object as it flies past; the yellow dot marks the closest point.</Explain>
         </Panel>
       </div>
       <div className="grid cols-2">
-        <Panel title="Probability of collision" meta={pc?.method ?? "not computed"}>
+        <Panel title="Chance of collision" meta={pc?.method ?? "not computed"}>
           <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <EncounterPlane miss={e.geometry.miss_in_plane_km} cov={pc?.details.projected_cov_km2} hbrKm={pc?.details.hbr_km} />
             <Kv items={[
@@ -93,7 +95,7 @@ export default function EncounterDetail() {
             {pc && pc.warnings.length > 0 && <div className="notice"><strong>Method warnings:</strong><ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>{pc.warnings.map((r) => <li key={r}>{r}</li>)}</ul></div>}
           </div>
         </Panel>
-        <Panel title="Provenance & quality">
+        <Panel title="Where these numbers come from">
           <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <Kv items={[
               ["Dataset", `${e.dataset.name} v${e.dataset.version}`],

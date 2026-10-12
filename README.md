@@ -23,6 +23,7 @@ A full-stack platform for satellite conjunction screening, encounter analysis, c
 ## Contents
 
 - [What ASTRAL does](#what-astral-does)
+- [Walkthrough](WALKTHROUGH.md) — plain-language tour and demo script
 - [Screenshots](#screenshots)
 - [How it works](#how-it-works)
 - [Quick start](#quick-start)
@@ -50,7 +51,7 @@ ASTRAL takes in orbital data for thousands of satellites and debris objects, pre
 | **Conjunction screening** | Catalogue-scale search with a mathematically conservative proximity bound, k-d-tree candidate selection and Brent-method refinement of the time of closest approach (TCA). |
 | **Encounter analysis** | Miss distance, relative velocity, RTN components, approach angle, encounter-plane geometry and relative-motion plots. |
 | **Collision probability** | 2D Foster/Alfano method with a Monte Carlo cross-check. Computed only when both covariances and a hard-body radius are available; otherwise reported explicitly as `INSUFFICIENT_DATA_FOR_PC`. |
-| **Manoeuvre studies** | Compare a baseline trajectory with hypothetical impulsive manoeuvres, including knock-on encounters with other objects. |
+| **Avoidance manoeuvres** | For any close approach, simulates 60 possible pushes (5 directions × 4 sizes × 3 timings), charts the predicted distance for each, ranks the most efficient ones and re-checks any option against every other object. |
 | **ML prioritisation** | Experimental model that ranks encounters for review. Separate from, and never a substitute for, the physical analysis. |
 | **3D visualisation** | Interactive Earth with every tracked object, orbit tracks, time scrubbing and encounter highlighting. |
 | **Reporting** | PDF, CSV and JSON reports with input hashes and software versions; CCSDS OEM and CDM export. |
@@ -137,21 +138,18 @@ Open **http://localhost:5173** and sign in. Interactive API documentation is at 
 
 ## Using the application
 
-| View | What you can do |
+| Page | What you can do |
 |---|---|
-| **01 Mission overview** | Dataset, job and encounter counts; closest approaches at a glance. |
-| **02 Orbital catalogue** | Search, sort and page through every object and its orbital elements. |
-| **03 3D environment** | Smooth playback (60×–1200×) of hundreds of objects, click to follow an object, open any encounter at its TCA. |
-| **04 Conjunction screening** | Configure and run screening jobs or CDM re-assessments; watch progress; see the screening funnel. |
-| **05 Encounter investigations** | Conjunction table, encounter-plane geometry, relative motion, probability details, provenance, CDM export. |
-| **06 Scientific analytics** | Encounter timeline, miss distance vs. speed, data freshness, validation findings, covariance diagnostics, benchmarks. Every chart exports CSV. |
-| **07 Datasets & uploads** | Upload files, fetch from CelesTrak, review validation findings, approve corrections. |
-| **08 ML laboratory** | Model registry, precision–recall and calibration curves, activation. |
-| **09 Scenario simulations** | Define a Δv and burn time; compare miss distances and check other affected encounters. |
-| **10 Reports** | Generate PDF/CSV/JSON reports; compare two analysis runs. |
-| **11 Administration** | System health, appearance (two colour/typography themes, dark/light), API tokens, accounts, audit log. |
+| **At a glance** | Four headline numbers, the Track → Find → Act story and the five closest passes. |
+| **3D view** | Smooth playback (60×–1200×) of hundreds of objects; click to follow one; open any close approach at its moment. |
+| **Close approaches** | Every predicted close pass with distance, timing, a picture of the pass, distance-over-time chart and data provenance. |
+| **Avoidance manoeuvres** | Predicted effect of 60 possible pushes, the most efficient options in plain words, and a full check against every other object. |
+| **Run a search** | Start a new search or check a conjunction message; see progress and the screening funnel. |
+| **Charts** | Timeline, distance vs speed, data freshness, data quality, uncertainty and search speed — each with a "what this shows" note and CSV export. |
+| **Tracked objects · Data sources · Reports** | Browse objects, load or upload data, export PDF/CSV/JSON reports. |
+| **AI ranking (beta) · Settings · How it works** | Experimental ranking model, system settings, and the in-app guided tour. |
 
-A full walkthrough is in [USER_GUIDE.md](USER_GUIDE.md).
+A plain-language walkthrough with a demo script is in [WALKTHROUGH.md](WALKTHROUGH.md); step-by-step usage is in [USER_GUIDE.md](USER_GUIDE.md).
 
 ---
 
@@ -244,6 +242,7 @@ Full results, tolerances and their justification: [VALIDATION_REPORT.md](VALIDAT
 | [SCIENTIFIC_METHODS.md](SCIENTIFIC_METHODS.md) | Algorithms, conventions, assumptions register |
 | [DATA_FORMATS.md](DATA_FORMATS.md) | Supported formats, validation rules, exports |
 | [API.md](API.md) | Authentication, endpoints, error codes, examples |
+| [WALKTHROUGH.md](WALKTHROUGH.md) | Plain-language tour, demo script, jury Q&A |
 | [USER_GUIDE.md](USER_GUIDE.md) | Step-by-step use of every view |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Local, Docker and production setup |
 | [OPERATIONS.md](OPERATIONS.md) | Monitoring, backup/restore, upgrades, incident response |

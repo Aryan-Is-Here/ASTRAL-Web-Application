@@ -24,6 +24,7 @@ import MlLab from "./pages/MlLab";
 import Scenarios from "./pages/Scenarios";
 import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
+import Guide from "./pages/Guide";
 import { Loading } from "./components/ui";
 
 // Three.js is large; load the 3D view on demand.
@@ -53,6 +54,7 @@ function Gate() {
         <Route path="scenarios" element={<Scenarios />} />
         <Route path="reports" element={<Reports />} />
         <Route path="admin" element={<Admin />} />
+        <Route path="guide" element={<Guide />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

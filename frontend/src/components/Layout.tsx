@@ -5,17 +5,18 @@ import type { Project } from "../api/types";
 import { useAuth } from "../lib/context";
 
 const NAV = [
-  ["overview", "Mission overview"],
-  ["catalogue", "Orbital catalogue"],
-  ["environment", "3D environment"],
-  ["screening", "Conjunction screening"],
-  ["encounters", "Encounter investigations"],
-  ["analytics", "Scientific analytics"],
-  ["datasets", "Datasets & uploads"],
-  ["ml", "ML laboratory"],
-  ["scenarios", "Scenario simulations"],
+  ["overview", "At a glance"],
+  ["environment", "3D view"],
+  ["encounters", "Close approaches"],
+  ["scenarios", "Avoidance manoeuvres"],
+  ["screening", "Run a search"],
+  ["analytics", "Charts"],
+  ["catalogue", "Tracked objects"],
+  ["datasets", "Data sources"],
   ["reports", "Reports"],
-  ["admin", "Administration"],
+  ["ml", "AI ranking (beta)"],
+  ["admin", "Settings"],
+  ["guide", "How it works"],
 ] as const;
 
 export function useProjectId(): number {

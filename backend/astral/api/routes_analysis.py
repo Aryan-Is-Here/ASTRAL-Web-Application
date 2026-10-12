@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from .. import ALGORITHM_VERSIONS
 from ..core.frames import Frame, convert, earth_rotation_angle_deg, eop_table_end, rtn_basis, teme_to_gcrf_matrices
-from ..core.maneuver import ManeuverSpec, simulate
+from ..core.maneuver import ManeuverSpec, maneuver_options, simulate
 from ..core.propagation import make_propagator, select_records
 from ..core.timeutil import TimeParseError, iso_utc, parse_epoch
 from ..db.models import AnalysisJob, Dataset, DatasetVersion, Encounter, ProbabilityCalculation, Report, Scenario, User
@@ -398,19 +398,19 @@ def create_scenario(eid: int, body: ScenarioIn, access=Depends(analyst), user: U
     e, j = _get_enc(db, p.id, eid)
     if j.kind != "screening":
         raise api_error(409, "NOT_SUPPORTED", "scenarios need propagatable inputs; CDM-only encounters have states at TCA only")
-    _, chosen = _props_for_job(db, j)
-    props = {k: make_propagator(v) for k, v in chosen.items()}
+    dv = db.get(DatasetVersion, j.dataset_version_id)
+    _, props, _ = _cached_propagators(dv)
     tca = Time(e.tca_iso.rstrip("Z"), scale="utc")
     spec = ManeuverSpec(burn_time=tca - TimeDelta(body.burn_minutes_before_tca * 60, format="sec"),
                         dv_rtn_m_s=(body.dv_r_m_s, body.dv_t_m_s, body.dv_n_m_s), spacecraft_mass_kg=body.spacecraft_mass_kg, isp_s=body.isp_s)
-    others = props if body.screen_other_objects and len(props) <= 500 else None
+    others = props if body.screen_other_objects else None
     try:
         res = simulate(props[e.primary_id], props[e.secondary_id], tca, spec, others, j.config.get("threshold_km", 5.0))
     except ValueError as exc:
         raise api_error(422, "INVALID_SCENARIO", str(exc)) from None
     result = res.to_dict()
-    if body.screen_other_objects and others is None:
-        result["warnings"].append("more than 500 objects: other-object screening skipped")
+    # How many other objects the new trajectory was actually checked against (0 = not checked).
+    result["others_checked"] = max(len(others) - 2, 0) if others else 0
     sc = Scenario(project_id=p.id, encounter_id=e.id, name=body.name, params=body.model_dump(), result=result,
                   algorithm_version=ALGORITHM_VERSIONS["maneuver_sim"], created_by=user.id)
     db.add(sc)
@@ -418,6 +418,32 @@ def create_scenario(eid: int, body: ScenarioIn, access=Depends(analyst), user: U
     audit.record(db, "scenario.create", user.id, p.id, f"scenario:{sc.id}", {"encounter": e.id})
     db.commit()
     return {"id": sc.id, "name": sc.name, "params": sc.params, "result": sc.result, "created_at": sc.created_at}
+
+
+_OPTIONS_CACHE: dict[tuple[int, str, int], dict] = {}
+
+
+@router.get("/encounters/{eid}/maneuver-options")
+def maneuver_options_route(eid: int, access=Depends(viewer), db: Session = Depends(get_db)):
+    """Predicted miss distance for a grid of hypothetical avoidance burns
+    (½, 1 and 2 orbits before TCA; five directions; 0.05–0.5 m/s)."""
+    p, _ = access
+    e, j = _get_enc(db, p.id, eid)
+    if j.kind != "screening":
+        raise api_error(409, "NOT_SUPPORTED", "manoeuvre options need propagatable inputs; this encounter comes from a CDM (states at TCA only)")
+    dv = db.get(DatasetVersion, j.dataset_version_id)
+    key = (e.id, dv.snapshot_sha256, int(Time.now().unix // 600))
+    if key not in _OPTIONS_CACHE:
+        _, props, _ = _cached_propagators(dv)
+        try:
+            out = maneuver_options(props[e.primary_id], props[e.secondary_id], Time(e.tca_iso.rstrip("Z"), scale="utc"))
+        except (KeyError, ValueError) as exc:
+            raise api_error(422, "NOT_COMPUTABLE", str(exc)) from None
+        if len(_OPTIONS_CACHE) > 200:
+            _OPTIONS_CACHE.clear()
+        _OPTIONS_CACHE[key] = out
+    return {"encounter_id": e.id, "primary": e.primary_name or e.primary_id, "secondary": e.secondary_name or e.secondary_id,
+            "screening_miss_km": e.miss_km, **_OPTIONS_CACHE[key]}
 
 
 @router.get("/encounters/{eid}/scenarios")

@@ -146,17 +146,32 @@ def _orthonormalise(m: np.ndarray) -> np.ndarray:
     return uu @ vt
 
 
+_KNOT_CACHE: dict[float, np.ndarray] = {}
+_KNOT_CACHE_MAX = 20000  # ~2.3 years of hourly knots
+
+
+def _knot_matrices(knots: np.ndarray) -> np.ndarray:
+    """Exact rotations at knot instants (seconds from J2000, UTC scale), cached."""
+    missing = [k for k in knots.tolist() if k not in _KNOT_CACHE]
+    if missing:
+        mk = _teme_to_gcrf_exact(Time(2451545.0, np.asarray(missing) / 86400.0, format="jd", scale="utc"))
+        if len(_KNOT_CACHE) + len(missing) > _KNOT_CACHE_MAX:
+            _KNOT_CACHE.clear()
+        for k, m in zip(missing, mk):
+            _KNOT_CACHE[k] = m
+    return np.stack([_KNOT_CACHE[k] for k in knots.tolist()])
+
+
 def teme_to_gcrf_matrices(times: Time) -> np.ndarray:
+    """(N,3,3) TEME->GCRF rotations: exact at hourly knots (cached), linearly
+    interpolated and re-orthonormalised in between (< 1 mm at 7000 km)."""
     t = Time(times).utc
     t = t.reshape(-1) if t.shape else Time([t])
     jd = (t.jd1 - 2451545.0 + t.jd2) * 86400.0  # seconds from J2000 (UTC scale; interpolation variable only)
     lo, hi = jd.min(), jd.max()
-    if hi - lo < 1.0:  # effectively one instant: no interpolation needed
-        return np.repeat(_teme_to_gcrf_exact(t[:1]), jd.size, axis=0)
     k0 = np.floor(lo / KNOT_S) * KNOT_S
-    knots = np.arange(k0, hi + KNOT_S, KNOT_S)
-    kt = Time(2451545.0, knots / 86400.0, format="jd", scale="utc")
-    mk = _teme_to_gcrf_exact(kt)
+    knots = np.arange(k0, max(hi, k0) + KNOT_S + 1e-6, KNOT_S)
+    mk = _knot_matrices(knots)
     out = np.empty((jd.size, 3, 3))
     for i in range(3):
         for j in range(3):

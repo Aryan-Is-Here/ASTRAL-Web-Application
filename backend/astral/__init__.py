@@ -11,6 +11,6 @@ ALGORITHM_VERSIONS = {
     "pc_foster_2d": "foster2d-gauss-legendre/1",
     "pc_monte_carlo": "mc-rectilinear/1",
     "covariance_validation": "cov-validate/1",
-    "maneuver_sim": "impulsive-j2-dop853/1",
+    "maneuver_sim": "impulsive-differential-j2/2",
     "report": "report/1",
 }

@@ -125,7 +125,7 @@ export default function Admin() {
   const s = sys.data as { version?: string; profile?: string; uptime_s?: number; queue?: Record<string, number>; process?: Record<string, number>; limits?: Record<string, number>; dependencies?: Record<string, string>; leap_second_table_expires?: string; readiness_statement?: string } | undefined;
   return (
     <div className="page">
-      <PageHead eyebrow="11 Administration & settings" title="Administration">{s?.readiness_statement}</PageHead>
+      <PageHead eyebrow="Settings" title="Settings">{s?.readiness_statement}</PageHead>
       <div className="grid cols-2">
         <Panel title="System health" meta={ready.data?.status}>
           <div className="panel-body">

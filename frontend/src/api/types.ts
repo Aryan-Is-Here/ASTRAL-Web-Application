@@ -65,7 +65,7 @@ export interface Scenario {
   id: number; name: string; params: Record<string, number | boolean | string | null>; created_at: string; algorithm_version?: string;
   result: {
     label: string; baseline: ScenarioArm; alternative: ScenarioArm; miss_change_km: number | null; dv_magnitude_m_s: number; propellant_kg: number | null;
-    model_divergence_km: Record<string, number | null>; other_encounters: { primary: string; secondary: string; tca_utc: string; geometry: Geometry }[];
+    displacement_at_tca_km: number | null; others_checked?: number; other_encounters: { primary: string; secondary: string; tca_utc: string; geometry: Geometry }[];
     warnings: string[]; model: string; algorithm: string;
   };
 }
@@ -95,4 +95,14 @@ export interface TrackObject { object_id: string; name: string | null; kind: str
 export interface Tracks {
   start_utc: string; step_s: number; samples: number; frame: string; total_objects: number; shown_objects: number;
   objects: TrackObject[]; notes: string[]; data_kind: string;
+}
+
+export interface ManeuverOption {
+  lead_orbits: number; lead_minutes: number; burn_utc: string; direction: string; direction_text: string; dv_m_s: number;
+  dv_rtn_m_s: number[]; miss_km: number; change_km: number; km_per_m_s: number; tca_shift_s: number | null; too_late: boolean;
+}
+export interface ManeuverOptions {
+  encounter_id: number; primary: string; secondary: string; screening_miss_km: number; label: string; baseline_miss_km: number;
+  baseline_tca_utc: string; orbital_period_min: number; leads: { lead_orbits: number; lead_minutes: number; burn_utc: string; too_late: boolean }[];
+  options: ManeuverOption[]; model: string; algorithm: string; caveats: string[];
 }

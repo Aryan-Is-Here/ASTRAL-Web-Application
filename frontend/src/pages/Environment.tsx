@@ -129,7 +129,7 @@ export default function Environment() {
 
   return (
     <div className="page" style={{ gap: 16 }}>
-      <PageHead eyebrow="03 3D orbital environment" title="Orbital environment">
+      <PageHead eyebrow="3D view" title="Earth and everything around it">
         Positions are propagated by the backend in 3-hour windows and animated in the browser. Motion between 2-minute samples is visual interpolation; no uncertainty is drawn.
       </PageHead>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
