@@ -1,6 +1,6 @@
 [project]
 name = "astral"
-version = "0.1.0"
+version = "2.0.0"
 description = "ASTRAL — Advanced Space Traffic Risk Assessment & Analysis Laboratory"
 requires-python = ">=3.11,<3.13"
 license = { text = "Apache-2.0" }

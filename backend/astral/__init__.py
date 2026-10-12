@@ -1,6 +1,6 @@
 """ASTRAL — Advanced Space Traffic Risk Assessment & Analysis Laboratory."""
 
-__version__ = "0.1.0"
+__version__ = "2.0.0"
 
 # Every persisted result records these identifiers so a rerun can be traced to
 # the exact algorithm revision that produced it. Bump the relevant entry when

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.0 — 2026-10-12
+
+Second release, prepared for public presentation.
+
+* **Real data:** `seed-live` loads public CelesTrak element sets (stations, bright satellites, Iridium-33, Cosmos-2251 and Fengyun-1C debris; ~2,850 objects) and screens them; `--project` refreshes an existing project and re-runs the search when the data is still recent.
+* **Avoidance manoeuvres:** 60 simulated pushes per close approach (5 directions × 4 sizes × 3 timings), a chart of predicted distance against push size, the most efficient options in plain words, and a one-click check against every other object. The no-manoeuvre baseline equals the screening result; burn times already in the past are marked "too late".
+* **3D view:** client-side animation of a prioritised subset (250/500/1000 objects) from one request per 3-hour window, with playback at 60×–1200×.
+* **Plain language:** new navigation, an "At a glance" summary, "What this shows" notes under every chart, and an in-app "How it works" guide; `WALKTHROUGH.md` with a demo script and Q&A.
+* **Fixes:** timestamps from the database are read as UTC; the manoeuvre check now covers every object (previously skipped above 500 objects while the UI implied it had run); the CDM relative-motion view is limited to the validity of its straight-line model; dependency security upgrades.
+
+
 ## 0.1.0 — 2026-10-12
 
 First implementation.
