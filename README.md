@@ -141,7 +141,7 @@ Open **http://localhost:5173** and sign in. Interactive API documentation is at 
 |---|---|
 | **01 Mission overview** | Dataset, job and encounter counts; closest approaches at a glance. |
 | **02 Orbital catalogue** | Search, sort and page through every object and its orbital elements. |
-| **03 3D environment** | Scrub ±12 hours, click objects for details, open any encounter at its TCA. |
+| **03 3D environment** | Smooth playback (60×–1200×) of hundreds of objects, click to follow an object, open any encounter at its TCA. |
 | **04 Conjunction screening** | Configure and run screening jobs or CDM re-assessments; watch progress; see the screening funnel. |
 | **05 Encounter investigations** | Conjunction table, encounter-plane geometry, relative motion, probability details, provenance, CDM export. |
 | **06 Scientific analytics** | Encounter timeline, miss distance vs. speed, data freshness, validation findings, covariance diagnostics, benchmarks. Every chart exports CSV. |

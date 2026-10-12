@@ -16,7 +16,7 @@ Choose a dataset version (GP elements or ephemerides), the window start (UTC), d
 The analysis workspace lists encounters with TCA countdown, miss distance and probability status. Click a row to see its encounter-plane geometry (covariance ellipses only when covariance exists). Double-click, or use *investigate*, for the full view: relative-motion chart (CSV export), 3D relative trajectory, Pc details or the reasons Pc was not computed, provenance (propagators, data ages, hashes), flags, analysis history and CDM export.
 
 ## 5. Visualise (03 3D environment)
-Select a dataset version and scrub time (±12 h) or press play. Click a marker for object details. Opening from an encounter jumps to TCA and draws both orbits. All positions are backend-propagated; lines between samples are visual interpolation.
+Select a dataset version and press **Play**. Positions are propagated by the backend for a 3-hour window in one request and animated in the browser at 60×, 300× or 1200×; the next window loads automatically before the current one ends. Choose how many objects to draw (250 / 500 / 1000; satellites first, then an even sample of debris) — screening always uses every object. Click an object to follow it and see its orbit; opening from an encounter jumps to TCA and highlights both objects.
 
 ## 6. Analytics (06)
 Encounter timeline and miss-vs-speed scatter (click a point to select), data freshness, validation findings, covariance diagnostics and benchmark runtime. Every chart states its units, time convention, source and data kind, and exports CSV.

@@ -51,6 +51,15 @@ def test_full_screening_workflow(app, users):
     assert abs(min(rel["range_km"]) - e["miss_km"]) < 0.05
     pos = c.get(f"/api/v1/projects/{pid}/viz/positions", params={"vid": dv["id"], "at": "2026-10-10T06:00:00Z"}).json()
     assert pos["frame"] == "GCRF" and len(pos["objects"]) == 16
+    tr = c.get(f"/api/v1/projects/{pid}/viz/tracks", params={"vid": dv["id"], "start": "2026-10-10T06:00:00Z", "duration_s": 3600,
+                                                             "step_s": 120, "limit": 10, "include": e["secondary_id"]}).json()
+    assert tr["shown_objects"] == 10 and tr["total_objects"] == 16 and tr["samples"] == 31
+    assert tr["objects"][0]["object_id"] == e["secondary_id"]  # requested objects come first
+    assert len(tr["objects"][0]["r"]) == 31 * 3
+    # first sample equals the single-instant position endpoint (same propagator, same frame)
+    p0 = next(o for o in pos["objects"] if o["object_id"] == e["secondary_id"])
+    r0 = tr["objects"][0]["r"][:3]
+    assert all(abs(a - b) < 0.1 for a, b in zip(r0, p0["r_km"]))
     traj = c.get(f"/api/v1/projects/{pid}/viz/trajectory", params={"vid": dv["id"], "object_id": e["primary_id"], "start": "2026-10-10T00:00:00Z"}).json()
     assert len(traj["r_km"]) == 200
     sc = c.post(f"/api/v1/projects/{pid}/encounters/{e['id']}/scenarios",

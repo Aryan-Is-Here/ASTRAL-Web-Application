@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .. import ALGORITHM_VERSIONS
-from ..core.frames import Frame, convert, earth_rotation_angle_deg, eop_table_end, rtn_basis
+from ..core.frames import Frame, convert, earth_rotation_angle_deg, eop_table_end, rtn_basis, teme_to_gcrf_matrices
 from ..core.maneuver import ManeuverSpec, simulate
 from ..core.propagation import make_propagator, select_records
 from ..core.timeutil import TimeParseError, iso_utc, parse_epoch
@@ -294,6 +294,89 @@ def viz_trajectory(vid: int, object_id: str, start: str, duration_s: float = 600
     rg, _ = convert(res.r_km[ok], res.v_km_s[ok], res.frame, Frame.GCRF, times) if ok.any() else (np.zeros((0, 3)), None)
     return {"object_id": object_id, "frame": "GCRF", "start_utc": iso_utc(t0), "t_s": offs[ok].round(2).tolist(), "r_km": rg.round(3).tolist(),
             "data_kind": f"propagated nominal trajectory ({prop.method}); line segments between samples are visual interpolation"}
+
+
+_PROP_CACHE: dict[str, tuple] = {}
+_PROP_CACHE_MAX = 4
+
+
+def _cached_propagators(dv: DatasetVersion):
+    """Parsed records + propagators per immutable snapshot (keyed by its hash)."""
+    hit = _PROP_CACHE.get(dv.snapshot_sha256)
+    if hit is not None:
+        return hit
+    records, _ = load_snapshot(dv)
+    chosen, notes = select_records(records)
+    props = {}
+    for oid, rec in chosen.items():
+        try:
+            props[oid] = make_propagator(rec)
+        except ValueError:
+            continue
+    if len(_PROP_CACHE) >= _PROP_CACHE_MAX:
+        _PROP_CACHE.pop(next(iter(_PROP_CACHE)))
+    _PROP_CACHE[dv.snapshot_sha256] = (chosen, props, notes)
+    return chosen, props, notes
+
+
+def _display_order(chosen: dict, include: list[str]) -> list[str]:
+    """Deterministic display priority: requested objects, then non-debris
+    (active satellites, stations), then an even sample of the rest."""
+    inc = [i for i in include if i in chosen]
+    rest = [i for i in sorted(chosen) if i not in set(inc)]
+    named = [i for i in rest if "DEB" not in (chosen[i].object_name or "").upper()]
+    debris = [i for i in rest if i not in set(named)]
+    # interleave debris so any prefix is spread across the catalogue
+    k = max(1, len(debris) // 997)
+    spread = [debris[j] for s in range(k) for j in range(s, len(debris), k)]
+    return inc + named + spread
+
+
+@router.get("/viz/tracks")
+def viz_tracks(vid: int, start: str, duration_s: float = 10800, step_s: float = 120, limit: int = 500, include: str = "",
+               access=Depends(viewer), db: Session = Depends(get_db)):
+    """Positions of up to `limit` objects on a time grid, in GCRF, for client-side
+    animation. One request covers a whole window; the browser interpolates
+    between samples (visual interpolation only)."""
+    p, _ = access
+    dv = db.get(DatasetVersion, vid)
+    if dv is None or db.get(Dataset, dv.dataset_id).project_id != p.id:
+        raise api_error(404, "NOT_FOUND", "dataset version not found")
+    try:
+        t0 = parse_epoch(start.rstrip("Z"), "UTC")
+    except TimeParseError as exc:
+        raise api_error(422, "INVALID_TIME", str(exc)) from None
+    duration_s = float(min(max(duration_s, 600), 24 * 3600))
+    step_s = float(min(max(step_s, 10), 600))
+    limit = int(min(max(limit, 10), 3000))
+    chosen, props, notes = _cached_propagators(dv)
+    order = [i for i in _display_order(chosen, [s for s in include.split(",") if s]) if i in props][:limit]
+    offs = np.arange(0.0, duration_s + 1e-9, step_s)
+    times = t0 + TimeDelta(offs, format="sec")
+    rot_cache: dict[Frame, np.ndarray] = {}
+    objects = []
+    for oid in order:
+        prop = props[oid]
+        res = prop.propagate(t0, offs)
+        r = res.r_km
+        if res.frame is Frame.TEME:
+            m = rot_cache.get(Frame.TEME)
+            if m is None:
+                m = rot_cache[Frame.TEME] = teme_to_gcrf_matrices(times)
+            r = np.einsum("nij,nj->ni", m, np.nan_to_num(r))
+        elif res.frame is not Frame.GCRF and res.valid.any():
+            idx = np.where(res.valid)[0]
+            rg, _ = convert(r[idx], res.v_km_s[idx], res.frame, Frame.GCRF, times[idx])
+            r = np.full_like(r, np.nan)
+            r[idx] = rg
+        flat = np.where(res.valid[:, None], np.round(r, 1), np.nan).ravel()
+        rec = chosen[oid]
+        objects.append({"object_id": oid, "name": rec.object_name, "kind": rec.kind.value,
+                        "age_days": round(float((t0 - rec.epoch).jd), 2),
+                        "r": [None if not np.isfinite(x) else float(x) for x in flat]})
+    return {"start_utc": iso_utc(t0), "step_s": step_s, "samples": len(offs), "frame": "GCRF", "total_objects": len(props),
+            "shown_objects": len(objects), "objects": objects, "notes": notes,
+            "data_kind": "propagated nominal positions; motion between samples is visual interpolation"}
 
 
 # ------------------------------------------------------------------ scenarios

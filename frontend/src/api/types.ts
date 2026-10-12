@@ -90,3 +90,9 @@ export interface MLModel {
 }
 
 export interface Paged<T> { total: number; items: T[] }
+
+export interface TrackObject { object_id: string; name: string | null; kind: string; age_days: number; r: (number | null)[] }
+export interface Tracks {
+  start_utc: string; step_s: number; samples: number; frame: string; total_objects: number; shown_objects: number;
+  objects: TrackObject[]; notes: string[]; data_kind: string;
+}

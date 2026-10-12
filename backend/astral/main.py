@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     s = get_settings()
     app = FastAPI(title="ASTRAL API", version=__version__, description=DESCRIPTION, lifespan=lifespan,
                   openapi_url="/api/v1/openapi.json", docs_url="/docs", redoc_url="/redoc")
+    app.add_middleware(GZipMiddleware, minimum_size=2048)
     app.add_middleware(BodyLimit)
     app.add_middleware(RateLimit)
     app.add_middleware(CORSMiddleware, allow_origins=s.allowed_origins, allow_credentials=True,
