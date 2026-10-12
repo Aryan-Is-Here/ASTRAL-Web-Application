@@ -59,7 +59,7 @@ export default function EncounterDetail() {
                 <XAxis dataKey="t" type="number" domain={["dataMin", "dataMax"]} stroke="var(--muted)" fontSize={11} label={{ value: "time from TCA (s)", position: "insideBottom", offset: -8, fill: "var(--muted)", fontSize: 11 }} />
                 <YAxis stroke="var(--muted)" fontSize={11} label={{ value: "km", angle: -90, position: "insideLeft", fill: "var(--muted)", fontSize: 11 }} />
                 <Tooltip contentStyle={{ background: "var(--s1)", border: "1px solid var(--hair)" }} formatter={(v) => (typeof v === "number" ? v.toFixed(4) : v)} labelFormatter={(l) => `t = ${l} s`} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend verticalAlign="top" height={28} wrapperStyle={{ fontSize: 12 }} />
                 <ReferenceLine x={0} stroke="var(--accT)" strokeDasharray="4 3" label={{ value: "TCA", fill: "var(--accT)", fontSize: 11 }} />
                 <Line dataKey="range" name="range" stroke="var(--acc)" dot={false} strokeWidth={2} isAnimationActive={false} />
                 <Line dataKey="r" name="radial" stroke="var(--warn)" dot={false} isAnimationActive={false} />
@@ -69,12 +69,12 @@ export default function EncounterDetail() {
             </ResponsiveContainer>
           </div>
           <ChartMeta units="km vs seconds from TCA" time="UTC (TCA reference)" source={rm.data?.data_kind ?? "—"} kind={kind} />
-          <Explain>The red line is the distance between the two objects; it dips to its minimum at the dashed line (closest approach, TCA). The other lines split that distance into up-down (radial), ahead-behind (along-track) and sideways (cross-track) parts.</Explain>
+          <Explain>The red line (range) is the straight-line distance between the two objects; it dips to its minimum at the dashed line (closest approach, TCA). The other three lines split that distance by direction, seen from the first object: radial = higher or lower (towards/away from Earth), in-track = ahead or behind along its direction of travel, cross-track = off to the side. Positive means higher, ahead, or to the orbit-normal side.</Explain>
         </Panel>
         <Panel title="The pass in 3D" meta="drag to rotate">
           <div style={{ height: 300 }}>{rm.data ? <RelativeScene rtn={rm.data.rtn_km} t={rm.data.t_s} /> : <Loading />}</div>
           <ChartMeta units="km" source={rm.data?.data_kind ?? "—"} kind={kind} />
-          <Explain>The first object sits at the centre. The orange curve is the path of the second object as it flies past; the yellow dot marks the closest point.</Explain>
+          <Explain>The white dot is the first object; the orange line is the path of the second object as it flies past, and the yellow dot is where it is at the moment of closest approach. The dashed yellow line is the gap between them. “Closest point” zooms in so the real gap is visible; “Whole fly-by” shows the full path, where the gap is too small to see — the objects do not touch.</Explain>
         </Panel>
       </div>
       <div className="grid cols-2">
