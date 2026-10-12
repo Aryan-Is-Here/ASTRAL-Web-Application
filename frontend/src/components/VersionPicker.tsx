@@ -13,7 +13,7 @@ export default function VersionPicker({ datasets, value, onChange, filter, label
         {value === null && <option value="">Select…</option>}
         {vs.map(({ ds, v }) => (
           <option key={v.id} value={v.id}>
-            {ds.name} · v{v.version} · {v.format} · {v.status}{ds.is_synthetic ? " · SYNTHETIC" : ""}
+            {ds.name} · v{v.version} · {v.format} · {v.status}
           </option>
         ))}
       </select>

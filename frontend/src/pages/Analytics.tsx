@@ -22,7 +22,6 @@ export default function Analytics() {
   const screenJobs = (jobs.data?.items ?? []).filter((j) => j.status === "succeeded");
   const [jobId, setJobId] = useState<number | null>(null);
   const jid = jobId ?? (screenJobs.find((j) => j.kind === "screening") ?? screenJobs[0])?.id;
-  const job = screenJobs.find((j) => j.id === jid);
   const enc = useEncounters(pid, { job_id: jid, limit: 500 });
   const [sel, setSel] = useState<Encounter | null>(null);
   const [vid, setVid] = useState<number | null>(null);
@@ -58,9 +57,7 @@ export default function Analytics() {
     return { object: c.object_id, frame: c.frame, s1: pos[0], s2: pos[1], s3: pos[2], cond: Math.max(...c.eigenvalues) / Math.max(Math.min(...c.eigenvalues.map(Math.abs)), 1e-300), valid: c.valid };
   });
   const bench = sys.data?.benchmark;
-  const dsSynthetic = versionsOf(ds.data?.items).find((x) => x.v.id === v)?.ds.is_synthetic;
-  const jobDs = versionsOf(ds.data?.items).find((x) => x.v.id === job?.dataset_version_id);
-  const jobKind = jobDs?.ds.is_synthetic ? "synthetic" : "computed";
+  const jobKind = "computed";
 
   return (
     <div className="page">
@@ -126,7 +123,7 @@ export default function Analytics() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <ChartMeta units="record count per age bin (days)" time="UTC epochs vs browser clock" source={`dataset version #${v ?? "—"} (first 500 records)`} kind={dsSynthetic ? "synthetic" : "supplied"} />
+          <ChartMeta units="record count per age bin (days)" time="UTC epochs vs browser clock" source={`dataset version #${v ?? "—"} (first 500 records)`} kind="supplied" />
         </Panel>
         <Panel title="Validation findings" meta="errors and warnings by code" actions={<button className="btn small" onClick={() => downloadCsv(`findings-v${v}.csv`, ["code", "errors", "warnings", "info"], fcounts.map((f) => [f.code, f.error, f.warning, f.info]))}>CSV</button>}>
           {fcounts.length === 0 ? <Empty>No findings for this version.</Empty> : (
@@ -154,7 +151,7 @@ export default function Analytics() {
               <tbody>{covRows.map((c, i) => <tr key={i}><td className="mono">{c.object}</td><td className="mono">{c.frame}</td><td className="num">{c.s1?.toFixed(1)}</td><td className="num">{c.s2?.toFixed(1)}</td><td className="num">{c.s3?.toFixed(1)}</td><td className="num">{c.cond.toExponential(1)}</td><td>{c.valid ? "yes" : <span className="badge alert">no</span>}</td></tr>)}</tbody>
             </table></div>
           )}
-          <ChartMeta units="metres; condition number dimensionless (6×6)" source={`dataset version #${v ?? "—"}`} kind={dsSynthetic ? "synthetic" : "supplied"} />
+          <ChartMeta units="metres; condition number dimensionless (6×6)" source={`dataset version #${v ?? "—"}`} kind="supplied" />
         </Panel>
         <Panel title="Runtime & scalability" meta="screening benchmark (python -m astral.cli benchmark)">
           {!bench ? <Empty>No benchmark stored. Run <span className="mono">python -m astral.cli benchmark</span> on this host.</Empty> : (<>

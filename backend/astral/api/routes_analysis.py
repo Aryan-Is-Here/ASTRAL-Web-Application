@@ -206,22 +206,28 @@ def relative_motion(eid: int, span_s: float = 600, points: int = 241, access=Dep
     span_s = float(min(max(span_s, 10), 6 * 3600))
     points = int(min(max(points, 11), 2001))
     tca = Time(e.tca_iso.rstrip("Z"), scale="utc")
-    offs = np.linspace(-span_s, span_s, points)
     if j.kind == "cdm_assessment":
+        # A CDM gives states at TCA only. The short-encounter model used for Pc
+        # assumes rectilinear *relative* motion, so show exactly that: Δr + Δv·t
+        # in the primary's RTN frame fixed at TCA, over at most ±120 s.
+        span_s = min(span_s, 120.0)
+        offs = np.linspace(-span_s, span_s, points)
         st1, st2 = np.asarray(e.primary_state), np.asarray(e.secondary_state)
-        r1 = st1[:3] + np.outer(offs, st1[3:])
-        r2 = st2[:3] + np.outer(offs, st2[3:])
-        v1 = np.tile(st1[3:], (points, 1))
-        kind = "rectilinear extrapolation of CDM states at TCA (illustrative; no propagation model supplied)"
-    else:
-        _, chosen = _props_for_job(db, j)
-        pa, pb = make_propagator(chosen[e.primary_id]), make_propagator(chosen[e.secondary_id])
-        ra, rb = pa.propagate(tca, offs), pb.propagate(tca, offs)
-        ok = ra.valid & rb.valid
-        if not ok.any():
-            raise api_error(409, "NO_STATES", "no valid states around TCA")
-        r1, v1, r2 = ra.r_km, ra.v_km_s, rb.r_km
-        kind = f"propagated: {pa.method} / {pb.method}"
+        b = rtn_basis(st1[:3], st1[3:])
+        rel = (st2[:3] - st1[:3]) + np.outer(offs, st2[3:] - st1[3:])
+        rtn = rel @ b.T
+        return {"encounter_id": e.id, "tca_utc": e.tca_iso, "frame": "primary RTN at TCA", "units": {"t": "s from TCA", "position": "km"},
+                "data_kind": "rectilinear relative motion from CDM states at TCA (the 2D Pc model's assumption; span limited to ±120 s)",
+                "t_s": offs.round(3).tolist(), "rtn_km": rtn.round(6).tolist(), "range_km": np.linalg.norm(rel, axis=1).round(6).tolist()}
+    offs = np.linspace(-span_s, span_s, points)
+    _, chosen = _props_for_job(db, j)
+    pa, pb = make_propagator(chosen[e.primary_id]), make_propagator(chosen[e.secondary_id])
+    ra, rb = pa.propagate(tca, offs), pb.propagate(tca, offs)
+    ok = ra.valid & rb.valid
+    if not ok.any():
+        raise api_error(409, "NO_STATES", "no valid states around TCA")
+    r1, v1, r2 = ra.r_km, ra.v_km_s, rb.r_km
+    kind = f"propagated: {pa.method} / {pb.method}"
     rel = r2 - r1
     rtn = np.array([rtn_basis(r1[k], v1[k]) @ rel[k] for k in range(points)])
     return {"encounter_id": e.id, "tca_utc": e.tca_iso, "frame": f"primary RTN ({e.frame}-based)", "units": {"t": "s from TCA", "position": "km"},

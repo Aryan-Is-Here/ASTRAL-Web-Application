@@ -50,7 +50,7 @@ Job configs:
 
 ```bash
 T=…   # API token
-curl -H "Authorization: Bearer $T" -F file=@examples/synthetic-catalogue.tle -F name=demo http://localhost:8000/api/v1/projects/1/datasets
+curl -H "Authorization: Bearer $T" -F file=@examples/sample-catalogue.tle -F name=demo http://localhost:8000/api/v1/projects/1/datasets
 curl -H "Authorization: Bearer $T" -H "Content-Type: application/json" -H "Idempotency-Key: run-1" \
   -d '{"dataset_version_id": 7, "config": {"kind":"screening","start_utc":"2026-10-10T00:00:00Z","duration_hours":24}}' \
   http://localhost:8000/api/v1/projects/1/jobs

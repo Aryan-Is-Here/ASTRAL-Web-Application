@@ -37,4 +37,4 @@ Exact duplicates (`DUPLICATE_RECORD`; first kept), conflicting records at the sa
 * **CDM** (KVN) for encounters with both covariances only (508.0-B-1 requires them). Mapping losses: no HBR field; ASTRAL omits fields it does not compute (screening volume, data quality, ephemeris names).
 * **CSV/JSON/PDF reports** — see `services/reports.py`; the JSON schema is `astral-report/1`.
 
-Examples (all **synthetic**): `examples/`.
+Example files (generated samples): `examples/`.

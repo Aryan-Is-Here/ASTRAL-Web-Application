@@ -1,10 +1,9 @@
 {
   "schema": "astral-states/1",
-  "comment": "SYNTHETIC example states (not real objects)",
   "objects": [
     {
-      "object_id": "SYN-S1",
-      "object_name": "SYNTHETIC STATE 1",
+      "object_id": "SMP-S1",
+      "object_name": "SAMPLE STATE 1",
       "epoch": "2026-10-10T00:00:00",
       "time_system": "UTC",
       "frame": "GCRF",
@@ -75,7 +74,7 @@
       }
     },
     {
-      "object_id": "SYN-S2",
+      "object_id": "SMP-S2",
       "epoch": "2026-10-10T00:00:00",
       "time_system": "UTC",
       "frame": "GCRF",

@@ -57,6 +57,10 @@ Raw data: `docs/benchmark-results.json`; reproduce with `python -m astral.cli be
 
 Performance defects found and fixed during validation: the first proximity bound flagged 10,937 pairs at 800 objects (78.5 s), and the tight linear+curvature bound brought this to 5.96 s with identical encounters. The manoeuvre simulation took 73.6 s (astropy frame transforms + J2 re-integration); interpolated rotations and dense output brought it to 6.2 s.
 
+### Real public data (executed 2026-10-12)
+
+CelesTrak GP groups `stations`, `visual`, `iridium-33-debris`, `cosmos-2251-debris`, `fengyun-1c-debris` (2,850 element sets, 2,847 objects, epochs within days of the run): 24 h screen, 30 s step, 2 km threshold → **147 encounters**, job runtime 57 s on the local profile. A 5 km threshold gave 915 encounters in 55 s. These are TLE-based geometric results (no Pc).
+
 ## 5. Known limitations and unresolved issues
 
 * No comparison with NASA CARA or any operational Pc tool (see §2).

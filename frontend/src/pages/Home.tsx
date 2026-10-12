@@ -27,12 +27,12 @@ export default function Home() {
       <Panel title="Your projects">
         {projects.isLoading && <Loading />}
         {projects.error && <ErrorView error={projects.error} />}
-        {projects.data && projects.data.items.length === 0 && <Empty>No projects yet. Create one below, or ask an administrator to run <span className="mono">python -m astral.cli seed-demo</span> for a synthetic demonstration project.</Empty>}
+        {projects.data && projects.data.items.length === 0 && <Empty>No projects yet. Create one below, or ask an administrator to load public data with <span className="mono">python -m astral.cli seed-live</span>.</Empty>}
         <table className="data">
           <tbody>
             {projects.data?.items.map((p) => (
               <tr key={p.id} className="clickable" onClick={() => nav(`/p/${p.id}/overview`)}>
-                <td><Link to={`/p/${p.id}/overview`}>{p.name}</Link>{p.is_demo && <> <span className="badge synthetic">Synthetic demo</span></>}</td>
+                <td><Link to={`/p/${p.id}/overview`}>{p.name}</Link></td>
                 <td className="muted">{p.description}</td>
                 <td><span className="badge">{p.role}</span></td>
               </tr>

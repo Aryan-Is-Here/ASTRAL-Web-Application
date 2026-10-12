@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, download, qs } from "../api/client";
 import type { DatasetVersion, DatasetVersionDetail, Finding, Paged } from "../api/types";
 import { useProjectId } from "../components/Layout";
-import { Empty, ErrorView, Kv, Loading, PageHead, Panel, Seg, SyntheticBadge } from "../components/ui";
+import { Empty, ErrorView, Kv, Loading, PageHead, Panel, Seg } from "../components/ui";
 import { useDatasets, versionsOf } from "../lib/hooks";
 import { utc } from "../lib/format";
 
@@ -79,7 +79,6 @@ function VersionDetail({ pid, vid }: { pid: number; vid: number }) {
   const v = d.data!;
   return (
     <Panel title={`${v.dataset.name} · v${v.version}`} meta={v.format} actions={<>
-      {v.dataset.is_synthetic && <SyntheticBadge />}
       <button className="btn small" onClick={() => download(`/projects/${pid}/dataset-versions/${vid}/validation-report.csv`, "validation.csv")}>Validation report CSV</button>
       <button className="btn small" onClick={() => download(`/projects/${pid}/dataset-versions/${vid}/raw`, "original.txt")}>Original file</button>
     </>}>
@@ -167,7 +166,7 @@ export default function Datasets() {
             <tbody>
               {versions.map(({ ds: d, v }) => (
                 <tr key={v.id} className={`clickable ${v.id === current ? "selected" : ""}`} onClick={() => setSel(v.id)} aria-selected={v.id === current}>
-                  <td>{d.name} {d.is_synthetic && <SyntheticBadge />}</td>
+                  <td>{d.name}</td>
                   <td className="mono">v{v.version}</td>
                   <td className="mono">{v.format}</td>
                   <td><span className={`badge ${v.status === "needs_review" ? "warn" : "ok"}`}>{v.status.replace("_", " ")}</span></td>

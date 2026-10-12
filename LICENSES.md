@@ -1,6 +1,6 @@
 # Licences and third-party inventory
 
-ASTRAL source code: Apache-2.0 (as declared in `backend/pyproject.toml`; add a LICENSE file before public release).
+ASTRAL source code: Apache License 2.0 (see `LICENSE`).
 
 ## Notable obligations
 

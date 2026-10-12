@@ -5,7 +5,7 @@ import { api, qs } from "../api/client";
 import type { EncounterDetail, Trajectory, VizPositions } from "../api/types";
 import { useProjectId } from "../components/Layout";
 import VersionPicker from "../components/VersionPicker";
-import { ErrorView, PageHead, SyntheticBadge } from "../components/ui";
+import { ErrorView, PageHead } from "../components/ui";
 import EarthScene, { type TrackLine } from "../scene/EarthScene";
 import { useDatasets, useJobs, versionsOf } from "../lib/hooks";
 import { ageLabel, km, utc } from "../lib/format";
@@ -63,7 +63,6 @@ export default function Environment() {
   });
   const lines: TrackLine[] = (tracks.data ?? []).map((t) => ({ id: t.object_id, points: t.r_km, color: t.object_id === enc.data?.secondary_id ? "#ffc500" : "#ff5a36", label: t.object_id }));
   const sel = pos.data?.objects.find((o) => o.object_id === selected);
-  const dsInfo = versionsOf(ds.data?.items).find((x) => x.v.id === vid);
   const primaryNow = enc.data ? pos.data?.objects.find((o) => o.object_id === enc.data!.primary_id) : undefined;
   const tcaMarker = enc.data && primaryNow && offsetMin === 0 && Math.abs(Date.parse(at) - Date.parse(enc.data.tca_utc)) < 60000
     ? { at: primaryNow.r_km, label: `TCA · miss ${km(enc.data.miss_km)}` } : null;
@@ -93,7 +92,6 @@ export default function Environment() {
             <div className="label">Scene</div>
             <div className="mono">{pos.data ? `${pos.data.objects.length} objects · ${pos.data.frame}` : pos.isLoading ? "propagating…" : "select a dataset"}</div>
             {pos.isFetching && <div className="muted">updating…</div>}
-            {dsInfo?.ds.is_synthetic && <div style={{ marginTop: 6 }}><SyntheticBadge /></div>}
             {pos.data?.not_shown ? <div className="muted">{pos.data.not_shown} objects without a valid state at this time</div> : null}
             {pos.data?.notes.map((n) => <div key={n} className="muted" style={{ marginTop: 4 }}>{n}</div>)}
             <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>

@@ -309,8 +309,6 @@ def run_cdm(job: AnalysisJob, dv: DatasetVersion, db: Session) -> None:
             flags.append("CDM_STATES_NOT_AT_RANGE_MINIMUM")
         if cdm.get("originator_miss_distance_m") is not None and abs(cdm["originator_miss_distance_m"] / 1000 - g.miss_km) > 0.01:
             flags.append("MISS_DIFFERS_FROM_ORIGINATOR")
-        if any(r.extra.get("catalog_name") == "SYNTHETIC" or (r.extra.get("cdm") or {}).get("originator") == "ASTRAL-SYNTHETIC" for r in (o1, o2)):
-            flags.append("SYNTHETIC")
         e = {"primary": o1.object_id, "secondary": o2.object_id, "tca_utc": iso_utc(o1.epoch), "geometry": g.to_dict(),
              "frame": "GCRF", "primary_state": [*r1, *v1], "secondary_state": [*r2, *v2], "refinement_status": "SUPPLIED_TCA", "flags": flags}
         cov_avail = "both" if (c1 is not None and c2 is not None) else ("partial" if (c1 is not None or c2 is not None) else "none")

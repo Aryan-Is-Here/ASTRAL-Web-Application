@@ -77,7 +77,7 @@ def generate(n_groups: int = 3000, seed: int = 20261011) -> dict:
     y = np.asarray(labels)
     digest = hashlib.sha256(x.tobytes() + y.tobytes()).hexdigest()
     return {"X": x, "y": y, "groups": np.asarray(groups), "created": np.asarray(created), "pc": np.asarray(pcs),
-            "regime": np.asarray(regimes), "features": FEATURES, "seed": seed, "sha256": digest, "origin": "synthetic",
+            "regime": np.asarray(regimes), "features": FEATURES, "seed": seed, "sha256": digest, "origin": "simulated",
             "label_definition": f"2D Pc (HBR {HBR_KM * 1000:.0f} m, assumed covariance growth) >= {PC_THRESHOLD:g}"}
 
 

@@ -36,7 +36,7 @@ export default function EncounterPlane({ miss, cov, hbrKm }: { miss: number[]; c
         <text x="8" y="242" fill="var(--muted)" fontSize="10" fontFamily="var(--fm)">
           {ell ? "encounter plane · combined covariance 1σ (dashed) / 3σ (dotted)" : "encounter plane · nominal miss vector only (no covariance)"}
         </text>
-        <text x="392" y="242" fill="var(--muted)" fontSize="10" fontFamily="var(--fm)" textAnchor="end">±{extent.toFixed(3)} km</text>
+        <text x="392" y="14" fill="var(--muted)" fontSize="10" fontFamily="var(--fm)" textAnchor="end">±{extent.toFixed(3)} km</text>
       </svg>
       <figcaption className="sr-only">Primary at the origin (filled, ink colour); secondary at the miss vector (filled, alert colour).</figcaption>
     </figure>

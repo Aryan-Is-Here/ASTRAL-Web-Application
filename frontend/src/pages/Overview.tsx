@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useProjectId } from "../components/Layout";
-import { Empty, ErrorView, JobStatus, Loading, PageHead, Panel, PcBadge, Stat, SyntheticBadge } from "../components/ui";
+import { Empty, ErrorView, JobStatus, Loading, PageHead, Panel, PcBadge, Stat } from "../components/ui";
 import { useDatasets, useEncounters, useJobs, versionsOf } from "../lib/hooks";
 import { km, kms, untilTca, utc } from "../lib/format";
 
@@ -73,7 +73,7 @@ export default function Overview() {
           <tbody>
             {versions.slice(0, 8).map(({ ds: d, v }) => (
               <tr key={v.id}>
-                <td>{d.name} {d.is_synthetic && <SyntheticBadge />}</td>
+                <td>{d.name}</td>
                 <td className="mono">v{v.version}</td>
                 <td className="mono">{v.format}</td>
                 <td><span className={`badge ${v.status === "needs_review" ? "warn" : "ok"}`}>{v.status.replace("_", " ")}</span></td>

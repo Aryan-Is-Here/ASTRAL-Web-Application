@@ -7,7 +7,7 @@ import type { EncounterDetail as Detail, RelativeMotion } from "../api/types";
 import EncounterPlane from "../components/EncounterPlane";
 import { useProjectId } from "../components/Layout";
 import RelativeScene from "../scene/RelativeScene";
-import { ChartMeta, ErrorView, Kv, Loading, PageHead, Panel, PcBadge, Seg, SyntheticBadge } from "../components/ui";
+import { ChartMeta, ErrorView, Kv, Loading, PageHead, Panel, PcBadge, Seg } from "../components/ui";
 import { ageLabel, km, kms, sci, untilTca, utc } from "../lib/format";
 
 export default function EncounterDetail() {
@@ -25,11 +25,10 @@ export default function EncounterDetail() {
   const e = d.data!;
   const pc = e.probability[0]?.result;
   const rows = rm.data ? rm.data.t_s.map((t, i) => ({ t, range: rm.data!.range_km[i], r: rm.data!.rtn_km[i]![0], tt: rm.data!.rtn_km[i]![1], n: rm.data!.rtn_km[i]![2] })) : [];
-  const kind = e.dataset.synthetic ? "synthetic" : e.job.kind === "cdm_assessment" ? "supplied" : "propagated";
+  const kind = e.job.kind === "cdm_assessment" ? "supplied" : "propagated";
   return (
     <div className="page">
       <PageHead eyebrow={`05 Encounter investigation · EVT-${String(e.id).padStart(4, "0")}`} title={`${e.primary_name ?? e.primary_id} × ${e.secondary_name ?? e.secondary_id}`} actions={<>
-        {e.dataset.synthetic && <SyntheticBadge />}
         <PcBadge status={e.pc_status} value={e.pc_value} />
         {e.job.kind === "screening" && <Link className="btn" to={`/p/${pid}/scenarios?encounter=${e.id}`}>Simulate manoeuvre</Link>}
         <Link className="btn" to={`/p/${pid}/environment?encounter=${e.id}`}>View in 3D</Link>
@@ -125,6 +124,5 @@ const FLAG_HELP: Record<string, string> = {
   STALE_INPUT: "Input data older than the staleness limit at TCA.",
   WINDOW_BOUNDARY: "Minimum lies on the analysis-window edge; the true TCA may be outside the window.",
   REFINEMENT_FAILED: "Root-finding did not converge; reported time is the best bracket endpoint.",
-  SYNTHETIC: "Synthetic demonstration input.",
   MISS_DIFFERS_FROM_ORIGINATOR: "ASTRAL's miss distance differs from the CDM originator's value by more than 10 m.",
 };

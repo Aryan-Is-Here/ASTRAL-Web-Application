@@ -99,6 +99,9 @@ def test_cdm_assessment_computes_pc_with_covariance(app, users):
     lo, hi = mc["ci95"]
     width = hi - lo
     assert lo - width <= e2["pc_value"] <= hi + width
+    rel = c.get(f"/api/v1/projects/{pid}/encounters/{e2['id']}/relative-motion", params={"span_s": 600, "points": 241}).json()
+    assert max(abs(t) for t in rel["t_s"]) <= 120.0  # rectilinear CDM view is limited to ±120 s
+    assert abs(min(rel["range_km"]) - e2["miss_km"]) < 1e-3
     exp = c.get(f"/api/v1/projects/{pid}/encounters/{e2['id']}/export/cdm")
     assert exp.status_code == 200 and "COLLISION_PROBABILITY" in exp.text
     # exported CDM re-parses with covariances intact

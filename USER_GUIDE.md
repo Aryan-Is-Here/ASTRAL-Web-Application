@@ -1,7 +1,7 @@
 # User guide
 
 ## 1. Projects
-Sign in, then create a project (or open the synthetic demo). Owners add members as viewer (read-only), analyst (upload, analyse, simulate) or owner (also manage members) in **Administration → Project members**.
+Sign in, then create a project or open an existing one ("Low Earth Orbit — public catalogue" holds real CelesTrak data; "Covariance & manoeuvre studies" holds sample conjunction messages with covariance). Owners add members as viewer (read-only), analyst (upload, analyse, simulate) or owner (also manage members) in **Administration → Project members**.
 
 ## 2. Upload data (07 Datasets & uploads)
 Drop a TLE, OMM, OEM, CDM or `astral-states` CSV/JSON file; the format is detected automatically or can be chosen. ASTRAL stores the original file unchanged, validates every record and creates **version 1** of the dataset. Review the findings table (filter by severity) and download the validation report CSV.

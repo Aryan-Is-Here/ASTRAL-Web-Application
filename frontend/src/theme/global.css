@@ -122,7 +122,6 @@ table.data th button { all: unset; cursor: pointer; }
 .badge.warn { border-color: var(--warn); color: var(--warn); }
 .badge.ok { border-color: var(--ok); color: var(--ok); }
 .badge.acc { border-color: var(--accT); color: var(--accT); }
-.badge.synthetic { border-style: dashed; border-color: var(--warn); color: var(--warn); }
 
 .notice { border: 1px solid var(--hair); border-left: 3px solid var(--warn); background: var(--s1); padding: 10px 14px; border-radius: var(--r); font-size: 13px; }
 .notice.error { border-left-color: var(--alert); }

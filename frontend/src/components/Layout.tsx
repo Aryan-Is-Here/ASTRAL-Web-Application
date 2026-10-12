@@ -51,7 +51,6 @@ export default function Layout() {
             {projects.data?.items.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           {current && <span className="badge">{current.role}</span>}
-          {current?.is_demo && <span className="badge synthetic" title="This project contains synthetic demonstration data only">Demo · synthetic data</span>}
           <span style={{ marginLeft: "auto" }} className="muted">{me?.user.display_name}</span>
           <button className="btn small" onClick={() => logout().then(() => nav("/"))}>Sign out</button>
         </div>

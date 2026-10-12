@@ -24,7 +24,7 @@ def test_generation_is_deterministic(data):
 
 
 def test_rare_event_and_origin(data):
-    assert data["origin"] == "synthetic"
+    assert data["origin"] == "simulated"
     assert 0.005 < data["y"].mean() < 0.15
 
 
@@ -80,7 +80,7 @@ def test_ood_flag_and_fallback(app, users):
     d = generate(300, seed=4)
     out = train(d, seed=0)
     row = MLModel(name="t", version="1", status="experimental", artefact_key="", artefact_sha256="", training_data_sha256="",
-                  training_data_origin="synthetic", params={}, metrics={}, feature_schema=out["meta"]["feature_schema"], seed=0, code_version="t")
+                  training_data_origin="simulated", params={}, metrics={}, feature_schema=out["meta"]["feature_schema"], seed=0, code_version="t")
     lm = LoadedModel(row, out["model"])
     x = d["X"][:2].copy()
     x[1, FEATURES.index("altitude_km")] = 36000.0

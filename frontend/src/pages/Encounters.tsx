@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import type { EncounterDetail, Scenario } from "../api/types";
 import EncounterPlane from "../components/EncounterPlane";
 import { useProjectId } from "../components/Layout";
-import { Empty, ErrorView, JobStatus, Loading, PageHead, PcBadge, Seg, SyntheticBadge } from "../components/ui";
+import { Empty, ErrorView, JobStatus, Loading, PageHead, PcBadge, Seg } from "../components/ui";
 import { useEncounters, useJobs } from "../lib/hooks";
 import { km, kms, sci, untilTca, utc } from "../lib/format";
 
@@ -94,7 +94,6 @@ export default function Encounters() {
                   <div className="stat"><span className="label">Rel. velocity</span><span className="v" style={{ fontSize: 18 }}>{kms(selected.rel_speed_km_s)}</span></div>
                   <div className="stat"><span className="label">Covariance</span><span style={{ fontSize: 15, paddingTop: 2 }}>{{ both: "Available", partial: "Partial", none: "Missing" }[selected.covariance_available]}</span></div>
                 </div>
-                {detail.data?.dataset.synthetic && <div style={{ margin: "0 20px 16px" }}><SyntheticBadge /> <span className="muted" style={{ fontSize: 12 }}>inputs are synthetic demonstration data</span></div>}
               </>
             ) : <Empty>Select an event.</Empty>}
           </div>

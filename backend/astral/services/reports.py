@@ -36,7 +36,7 @@ LIMITATIONS = [
     "Encounters satisfy a geometric screening threshold. A small miss distance is not a collision prediction.",
     "Positions from public TLE/OMM elements (SGP4) have errors of order kilometres growing with data age; they support screening and research only.",
     "Probability of collision is reported only where both covariances and an explicit hard-body radius were available; otherwise the status INSUFFICIENT_DATA_FOR_PC is shown.",
-    "ML priority scores (if present) are experimental, trained on synthetic data, and are not probabilities of collision.",
+    "ML priority scores (if present) are experimental, not validated on operational data, and are not probabilities of collision.",
     "This report has not been reviewed by a qualified conjunction-assessment authority and is not suitable for operational decisions.",
 ]
 
@@ -54,7 +54,7 @@ def encounters_csv(db: Session, job: AnalysisJob) -> bytes:
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["# ASTRAL encounter export", f"job={job.id}", f"config_sha256={job.config_sha256}", f"dataset_snapshot_sha256={c['dv'].snapshot_sha256}",
-                f"report={REPORT_VERSION}", f"synthetic={c['ds'].is_synthetic}"])
+                f"report={REPORT_VERSION}"])
     w.writerow(["encounter_id", "primary_id", "secondary_id", "tca_utc", "miss_km", "rel_speed_km_s", "radial_km", "intrack_km", "crosstrack_km",
                 "approach_angle_deg", "frame", "refinement_status", "covariance_available", "pc_status", "pc_value", "ml_priority_experimental",
                 "flags"])
@@ -77,7 +77,7 @@ def report_json(db: Session, job: AnalysisJob) -> bytes:
                      "started": job.started_at.isoformat() if job.started_at else None,
                      "finished": job.finished_at.isoformat() if job.finished_at else None, "software": job.software,
                      "stats": job.stats, "warnings": job.warnings},
-        "input": {"dataset": c["ds"].name, "dataset_version": c["dv"].version, "dataset_version_id": c["dv"].id, "synthetic": c["ds"].is_synthetic,
+        "input": {"dataset": c["ds"].name, "dataset_version": c["dv"].version, "dataset_version_id": c["dv"].id,
                   "snapshot_sha256": c["dv"].snapshot_sha256, "provenance": c["dv"].provenance, "format": c["dv"].format,
                   "validation": {"errors": sum(f.severity == "error" for f in c["findings"]), "warnings": sum(f.severity == "warning" for f in c["findings"])}},
         "encounters": [{
@@ -112,8 +112,6 @@ def report_pdf(db: Session, job: AnalysisJob) -> bytes:
     h, p = ss["Heading1"], ss["BodyText"]
     small = ss["BodyText"].clone("small", fontSize=8, leading=10)
     story.append(Paragraph(f"ASTRAL analysis report — job {job.id}", h))
-    if c["ds"].is_synthetic:
-        story.append(Paragraph("<b>SYNTHETIC DEMONSTRATION DATA — not real observations.</b>", p))
     story.append(Paragraph(f"Generated {datetime.now(UTC).isoformat(timespec='seconds')} · report {REPORT_VERSION} · ASTRAL {__version__}", small))
     story.append(Spacer(1, 6))
     meta = [["Analysis kind", job.kind], ["Status", job.status], ["Dataset", f"{c['ds'].name} v{c['dv'].version} ({c['dv'].format})"],

@@ -1,66 +1,274 @@
+<div align="center">
+
 # ASTRAL
 
-**Advanced Space Traffic Risk Assessment & Analysis Laboratory** — a research and evaluation platform for orbital-data ingestion, conjunction screening, encounter-geometry analysis, covariance-based probability of collision, hypothetical manoeuvre comparison and reproducible reporting.
+### Advanced Space Traffic Risk Assessment & Analysis Laboratory
 
-> **Readiness statement.** ASTRAL is research and evaluation software. It is **not** qualified for operational conjunction assessment or spacecraft-safety decisions. It has no flight heritage, certification or agency acceptance. Passing its automated tests does not change that. See [VALIDATION_REPORT.md](VALIDATION_REPORT.md) and [ROADMAP.md](ROADMAP.md).
+A full-stack platform for satellite conjunction screening, encounter analysis, collision-probability assessment and 3D orbital visualisation, built around traceable, reproducible results.
 
-![Landing](docs/screenshots/landing.jpg)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.143-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Three.js](https://img.shields.io/badge/Three.js-3D-000000?logo=three.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-109%20passing-2ea44f)
 
-## What it does
+</div>
 
-| Capability | Status |
+![Analysis workspace](docs/screenshots/analysis-workspace.jpg)
+
+---
+
+## Contents
+
+- [What ASTRAL does](#what-astral-does)
+- [Screenshots](#screenshots)
+- [How it works](#how-it-works)
+- [Quick start](#quick-start)
+- [Using the application](#using-the-application)
+- [Data sources](#data-sources)
+- [Architecture](#architecture)
+- [Scientific approach](#scientific-approach)
+- [Testing and validation](#testing-and-validation)
+- [Project structure](#project-structure)
+- [Documentation](#documentation)
+- [Status and limitations](#status-and-limitations)
+- [License](#license)
+
+---
+
+## What ASTRAL does
+
+ASTRAL takes in orbital data for thousands of satellites and debris objects, predicts where they will be, finds pairs that will pass close to each other, and helps an analyst understand each close approach. Every number it shows can be traced back to its input data, algorithm and configuration.
+
+| Area | Capability |
 |---|---|
-| Ingest TLE, OMM (KVN/XML/JSON/CSV), OEM (KVN), CDM (KVN), ASTRAL CSV/JSON state vectors; validation, duplicate/conflict/staleness detection, immutable versioned snapshots with SHA-256 | Implemented, tested |
-| SGP4 propagation (python-sgp4, Vallado verification set reproduced to < 1 mm) | Implemented, reference-tested |
-| Operator ephemeris interpolation (cubic Hermite, no extrapolation, gap-aware) | Implemented, reference-tested |
-| Frame/time handling: TEME, GCRF, EME2000, ITRF; UTC/TAI/TT/GPS/TDB | Implemented, reference-tested |
-| Catalogue screening with a provably conservative proximity bound, k-d tree, Brent TCA refinement | Implemented, brute-force-tested |
-| 2D probability of collision (Foster/Alfano erf-quadrature) **only** with both covariances and an explicit hard-body radius; Monte Carlo cross-check | Implemented, tested against closed forms |
-| `INSUFFICIENT_DATA_FOR_PC` when inputs are missing (e.g. all TLE-based screening) | Enforced and tested |
-| Experimental ML prioritisation (synthetic labelled data, rule baseline, PR/calibration metrics, registry, OOD flags) | Implemented; **experimental** |
-| Hypothetical impulsive-manoeuvre comparison (two-body + J2, simulation only) | Implemented; research-grade model |
-| 3D orbital environment, encounter investigation, scientific charts with CSV export | Implemented |
-| Reports: PDF, CSV, JSON; CCSDS OEM and CDM export | Implemented |
-| Auth (Argon2id, sessions + CSRF, API tokens), project RBAC, audit log, rate limits, quotas | Implemented, security-tested |
-| PostgreSQL + external worker via Docker Compose; SQLite local profile | Implemented, smoke-tested |
+| **Data ingestion** | TLE, CCSDS OMM (KVN / XML / JSON / CSV), OEM and CDM, plus documented CSV/JSON state-vector formats. Each upload is validated record by record and stored as an immutable, SHA-256-hashed dataset version. |
+| **Live data** | Optional import of public orbital data from CelesTrak, recorded with full fetch provenance. |
+| **Propagation** | SGP4 for element sets (verified against the published Vallado test set), Hermite interpolation for supplied ephemerides, and a two-body + J2 numerical model for manoeuvre studies. |
+| **Conjunction screening** | Catalogue-scale search with a mathematically conservative proximity bound, k-d-tree candidate selection and Brent-method refinement of the time of closest approach (TCA). |
+| **Encounter analysis** | Miss distance, relative velocity, RTN components, approach angle, encounter-plane geometry and relative-motion plots. |
+| **Collision probability** | 2D Foster/Alfano method with a Monte Carlo cross-check. Computed only when both covariances and a hard-body radius are available; otherwise reported explicitly as `INSUFFICIENT_DATA_FOR_PC`. |
+| **Manoeuvre studies** | Compare a baseline trajectory with hypothetical impulsive manoeuvres, including knock-on encounters with other objects. |
+| **ML prioritisation** | Experimental model that ranks encounters for review. Separate from, and never a substitute for, the physical analysis. |
+| **3D visualisation** | Interactive Earth with every tracked object, orbit tracks, time scrubbing and encounter highlighting. |
+| **Reporting** | PDF, CSV and JSON reports with input hashes and software versions; CCSDS OEM and CDM export. |
+| **Platform** | Authentication, per-project roles, audit log, rate limits, background job queue, Docker deployment. |
 
-## Quick start (local development profile)
+---
 
-Requirements: Python 3.11, Node.js 20+ (22 tested). No GPU, no cloud services, no internet access needed at run time.
+## Screenshots
+
+| Orbital environment (2,847 tracked objects) | Encounter investigation |
+|---|---|
+| ![3D environment](docs/screenshots/orbital-environment.jpg) | ![Encounter investigation](docs/screenshots/encounter-investigation.jpg) |
+
+---
+
+## How it works
+
+```
+ Upload / CelesTrak ──► Validate ──► Immutable dataset version (hashed)
+                                              │
+                                              ▼
+                         Background job: propagate ─► screen ─► refine TCA
+                                              │
+                                              ▼
+              Encounters ─► geometry ─► probability (when covariance exists)
+                                              │
+                     ┌────────────────────────┼────────────────────────┐
+                     ▼                        ▼                        ▼
+              3D & charts           Manoeuvre comparison       PDF / CSV / JSON / CCSDS
+```
+
+1. **Ingest.** Files are parsed, checked (checksums, units, frames, time systems, duplicates, stale data, covariance validity) and saved as a fixed version. Corrections are proposed, never applied silently.
+2. **Analyse.** A screening job propagates every object over the chosen window, finds all pairs that come within the threshold, and pins down each closest approach to sub-millisecond precision.
+3. **Investigate.** Each encounter shows its geometry, data age, propagation method and, when inputs allow, its probability of collision.
+4. **Report.** Results export with the hashes and versions needed to reproduce them.
+
+---
+
+## Quick start
+
+### Option A — Docker (PostgreSQL, API and worker)
+
+```bash
+git clone https://github.com/Aryan-Is-Here/ASTRAL-Web-Application.git
+cd ASTRAL-Web-Application
+cp .env.example .env          # set ASTRAL_SECRET_KEY and POSTGRES_PASSWORD
+docker compose up -d --build
+docker compose exec -e ASTRAL_ADMIN_PASSWORD='choose-a-long-password' api \
+  python -m astral.cli create-admin --email you@example.org
+```
+
+Open `http://localhost:8000` (behind a TLS proxy in production — see [DEPLOYMENT.md](DEPLOYMENT.md)).
+
+### Option B — Local development
+
+Requirements: **Python 3.11** and **Node.js 20+**. No GPU or cloud services are needed.
+
+**Backend**
 
 ```bash
 cd backend
 python -m venv .venv
-.venv/Scripts/pip install -r requirements.lock.txt   # Linux/macOS: .venv/bin/pip
-.venv/Scripts/python -m astral.cli migrate
-ASTRAL_ADMIN_PASSWORD='choose-a-12+-char-password' .venv/Scripts/python -m astral.cli create-admin --email you@example.org
-.venv/Scripts/python -m astral.cli seed-demo --email you@example.org      # optional SYNTHETIC demo project
-.venv/Scripts/python -m astral.cli train-ml --activate                    # optional experimental model
-.venv/Scripts/python -m uvicorn astral.main:app --port 8000
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
+pip install -r requirements.lock.txt
+python -m astral.cli migrate
+ASTRAL_ADMIN_PASSWORD='choose-a-long-password' python -m astral.cli create-admin --email you@example.org
+python -m astral.cli seed-live --email you@example.org    # real CelesTrak data (needs internet)
+python -m astral.cli seed-demo --email you@example.org    # sample CDMs with covariance
+python -m astral.cli train-ml --activate                  # optional experimental model
+uvicorn astral.main:app --port 8000
 ```
+
+**Frontend** (in a second terminal)
 
 ```bash
 cd frontend
 npm ci
-npm run dev        # http://localhost:5173 (proxies /api to :8000)
+npm run dev
 ```
 
-API documentation (OpenAPI): <http://localhost:8000/docs>. Production deployment: [DEPLOYMENT.md](DEPLOYMENT.md).
+Open **http://localhost:5173** and sign in. Interactive API documentation is at **http://localhost:8000/docs**.
 
-## Tests
+---
+
+## Using the application
+
+| View | What you can do |
+|---|---|
+| **01 Mission overview** | Dataset, job and encounter counts; closest approaches at a glance. |
+| **02 Orbital catalogue** | Search, sort and page through every object and its orbital elements. |
+| **03 3D environment** | Scrub ±12 hours, click objects for details, open any encounter at its TCA. |
+| **04 Conjunction screening** | Configure and run screening jobs or CDM re-assessments; watch progress; see the screening funnel. |
+| **05 Encounter investigations** | Conjunction table, encounter-plane geometry, relative motion, probability details, provenance, CDM export. |
+| **06 Scientific analytics** | Encounter timeline, miss distance vs. speed, data freshness, validation findings, covariance diagnostics, benchmarks. Every chart exports CSV. |
+| **07 Datasets & uploads** | Upload files, fetch from CelesTrak, review validation findings, approve corrections. |
+| **08 ML laboratory** | Model registry, precision–recall and calibration curves, activation. |
+| **09 Scenario simulations** | Define a Δv and burn time; compare miss distances and check other affected encounters. |
+| **10 Reports** | Generate PDF/CSV/JSON reports; compare two analysis runs. |
+| **11 Administration** | System health, appearance (two colour/typography themes, dark/light), API tokens, accounts, audit log. |
+
+A full walkthrough is in [USER_GUIDE.md](USER_GUIDE.md).
+
+---
+
+## Data sources
+
+| Source | Used for |
+|---|---|
+| **CelesTrak** (public GP element sets) | Real catalogue screening. `seed-live` loads the ISS and other stations, the brightest satellites, and the Iridium-33, Cosmos-2251 and Fengyun-1C debris clouds (≈2,850 objects). |
+| **Your own files** | Any supported format through the upload page or the API. |
+| **Sample conjunction messages** (`seed-demo`, `examples/`) | Demonstrating covariance-based probability and manoeuvre comparison. Public element sets carry no covariance, so probability needs CDMs or ephemerides that include it. |
+
+Public element sets are suitable for screening and research. They are not an authoritative source for operational decisions.
+
+---
+
+## Architecture
+
+```
+frontend/   React 18 · TypeScript (strict) · Vite · three.js (react-three-fiber) · Recharts · TanStack Query
+backend/
+  astral/core/      Scientific core — parsers, time & frames, propagation, screening, encounter geometry,
+                    covariance, probability, manoeuvres. No web dependencies; usable as a library.
+  astral/services/  Datasets, job queue & worker, reports, data providers, auth, audit, object storage
+  astral/api/       FastAPI routers, security middleware, role-based access
+  astral/ml/        Features, training, evaluation, inference
+  astral/db/        SQLAlchemy models; Alembic migrations
+```
+
+- **Database:** PostgreSQL in production, SQLite for local development.
+- **Jobs:** database-backed queue (`SELECT … FOR UPDATE SKIP LOCKED`) with in-process or separate worker processes; progress, cancellation, retries for transient failures only.
+- **Reproducibility:** every analysis references an immutable input snapshot whose hash is checked before use, plus a configuration hash and the versions of every algorithm and library.
+
+Details: [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
+## Scientific approach
+
+- **Time and frames:** UTC/TAI/TT/GPS/TDB via ERFA; TEME, GCRF, EME2000 and ITRF, with tested conversions and explicit handling of leap seconds and Earth-orientation data.
+- **Screening completeness:** if two objects truly pass within the threshold, the nearest grid step is guaranteed to flag them, because of a bound on relative acceleration. This is verified against brute-force sampling.
+- **Probability of collision:** only with both covariances and a hard-body radius. Assumptions are stated in every result, and applicability warnings are attached.
+- **Honest outputs:** a small miss distance is reported as a geometric result, never as a collision prediction. Missing inputs produce an explicit status instead of a guessed number.
+
+Methods, equations and the full assumptions register: [SCIENTIFIC_METHODS.md](SCIENTIFIC_METHODS.md).
+
+---
+
+## Testing and validation
+
+| Suite | Tests |
+|---|---|
+| Scientific reference (SGP4 vs. Vallado 2006, frame conversions, probability vs. closed forms, screening vs. brute force, integrator invariants) | 56 |
+| Unit (parsers, covariance, geometry, manoeuvres) | 21 |
+| Integration (full HTTP workflow on a real database) | 4 |
+| Security (isolation, CSRF, lockout, limits, injection, audit) | 13 |
+| Machine learning (determinism, leakage guards, metrics, fallbacks) | 8 |
+| Frontend (design tokens, formatting, probability badges) | 7 |
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest -q          # 102 tests: reference, unit, integration, security, ML
+cd backend && python -m pytest -q
 cd frontend && npm test && npm run typecheck && npm run lint
 ```
 
+**Performance** (Intel Core i5-11260H laptop, 24-hour window, 30 s step): 800 objects in 6.0 s, 2,000 objects in 11.6 s. On real CelesTrak data, a 24-hour screen of 2,847 objects found 147 close approaches under 2 km in under a minute.
+
+Full results, tolerances and their justification: [VALIDATION_REPORT.md](VALIDATION_REPORT.md).
+
+---
+
+## Project structure
+
+```
+.
+├── backend/              Python package, tests, Alembic migrations, requirements
+├── frontend/             React application
+├── examples/             Example input files for every supported format
+├── docs/                 Design reference, screenshots, benchmark results
+├── Dockerfile            Production image (API + built frontend)
+├── docker-compose.yml    PostgreSQL + API + worker
+└── *.md                  Documentation (see below)
+```
+
+---
+
 ## Documentation
 
-[ARCHITECTURE](ARCHITECTURE.md) · [SCIENTIFIC_METHODS](SCIENTIFIC_METHODS.md) (includes the assumptions register) · [DATA_FORMATS](DATA_FORMATS.md) · [API](API.md) · [USER_GUIDE](USER_GUIDE.md) · [SECURITY](SECURITY.md) · [DEPLOYMENT](DEPLOYMENT.md) · [OPERATIONS](OPERATIONS.md) · [VALIDATION_REPORT](VALIDATION_REPORT.md) · [ML_CARD](ML_CARD.md) · [MODEL_AND_DATA_LIMITATIONS](MODEL_AND_DATA_LIMITATIONS.md) · [LICENSES](LICENSES.md) · [ROADMAP](ROADMAP.md) · [CHANGELOG](CHANGELOG.md)
+| Document | Contents |
+|---|---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Components, data flow, design decisions |
+| [SCIENTIFIC_METHODS.md](SCIENTIFIC_METHODS.md) | Algorithms, conventions, assumptions register |
+| [DATA_FORMATS.md](DATA_FORMATS.md) | Supported formats, validation rules, exports |
+| [API.md](API.md) | Authentication, endpoints, error codes, examples |
+| [USER_GUIDE.md](USER_GUIDE.md) | Step-by-step use of every view |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Local, Docker and production setup |
+| [OPERATIONS.md](OPERATIONS.md) | Monitoring, backup/restore, upgrades, incident response |
+| [SECURITY.md](SECURITY.md) | Threat model and controls |
+| [VALIDATION_REPORT.md](VALIDATION_REPORT.md) | Executed tests, reference comparisons, benchmarks |
+| [ML_CARD.md](ML_CARD.md) | Model purpose, training, evaluation, limits |
+| [MODEL_AND_DATA_LIMITATIONS.md](MODEL_AND_DATA_LIMITATIONS.md) | Known modelling and data limitations |
+| [ROADMAP.md](ROADMAP.md) | Planned work |
+| [LICENSES.md](LICENSES.md) | Third-party licences |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 
-## Design
+---
 
-The interface implements the "ASTRAL Pairings" design exploration (`docs/design/`): pairing **D "Ignition"** (default — black ground, red accent, yellow secondary, Fjalla One / Cantarell / IBM Plex Mono) and **E "Kyoto"**, each with dark/light modes, density and accent-hue controls under *Administration → Appearance*. Deliberate deviations from the mock-up, made for scientific honesty: risk badges appear only for computed probabilities and always carry text; the mock-up's "Recommended" manoeuvre label became "Simulated"; covariance ellipses are drawn only when a covariance exists.
+## Status and limitations
 
-![Analysis workspace](docs/screenshots/analysis-workspace.jpg)
-![3D environment](docs/screenshots/environment-3d.jpg)
+ASTRAL is **research and evaluation software**. It has not been independently qualified for operational spacecraft-safety decisions, and results should be reviewed by a qualified analyst. Main open items:
+
+- comparison of probability results against NASA CARA reference cases;
+- covariance propagation (probability is currently computed at CDM-supplied TCAs);
+- OIDC single sign-on.
+
+See [ROADMAP.md](ROADMAP.md) and [MODEL_AND_DATA_LIMITATIONS.md](MODEL_AND_DATA_LIMITATIONS.md).
+
+---
+
+## License
+
+Licensed under the Apache License 2.0. Third-party components and their licences are listed in [LICENSES.md](LICENSES.md).

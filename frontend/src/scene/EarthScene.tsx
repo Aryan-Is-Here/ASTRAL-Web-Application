@@ -43,7 +43,7 @@ function Markers({ objects, selected, highlight, onSelect }: { objects: VizObjec
   useEffect(() => () => geom.dispose(), [geom]);
   return (
     <points ref={ref} geometry={geom} onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); const i = e.index; if (i !== undefined && objects[i]) onSelect(objects[i]!.object_id); }}>
-      <pointsMaterial size={6} sizeAttenuation={false} vertexColors />
+      <pointsMaterial size={objects.length > 1000 ? 3 : objects.length > 200 ? 4 : 6} sizeAttenuation={false} vertexColors />
     </points>
   );
 }
